@@ -33,41 +33,20 @@ public final class DeploymentResource implements KubernetesResource {
     @Override
     public void build() {
         io.fabric8.kubernetes.api.model.Container container = new ContainerBuilder()
-            .withImage(stack.getLabel() + ":latest")
-            .withName(stack.getLabel())
-            .withImagePullPolicy("Never")
-            .addAllToPorts(stack.getPorts().stream()
-                .map(PortMapping::toContainerPort)
-                .collect(Collectors.toList()))
-            .addAllToEnv(stack.getEnvVars().entrySet().stream()
-                .map(e -> new EnvVar(e.getKey(), e.getValue(), null))
-                .collect(Collectors.toSet()))
-            .addAllToEnv(stack.getRuntimeEnvVars().stream().map(name -> {
-                var source = new EnvVarSourceBuilder().withNewConfigMapKeyRef().withNewKey(name)
-                    .withNewName(stack.getConfigMapName()).endConfigMapKeyRef().build();
-                return new EnvVarBuilder().withName(name).withValueFrom(source).build();
-            }).collect(Collectors.toSet()))
-            .build();
-        deployment = new DeploymentBuilder()
-            .withNewMetadata()
-            .withName(stack.getLabel())
-            .addToLabels("app", stack.getLabel())
-            .endMetadata()
-            .withNewSpec()
-            .withReplicas(1)
-            .withNewSelector()
-            .addToMatchLabels("app", stack.getLabel())
-            .endSelector()
-            .withNewTemplate()
-            .withNewMetadata()
-            .withName(stack.getLabel())
-            .addToLabels("app", stack.getLabel())
-            .endMetadata()
-            .withNewSpec()
-            .addAllToContainers(Lists.newArrayList(container))
-            .endSpec()
-            .endTemplate()
-            .endSpec().build();
+                .withImage(stack.getLabel() + ":latest").withName(stack.getLabel()).withImagePullPolicy("Never")
+                .addAllToPorts(stack.getPorts().stream().map(PortMapping::toContainerPort).collect(Collectors.toList()))
+                .addAllToEnv(stack.getEnvVars().entrySet().stream().map(e -> new EnvVar(e.getKey(), e.getValue(), null))
+                        .collect(Collectors.toSet()))
+                .addAllToEnv(stack.getRuntimeEnvVars().stream().map(name -> {
+                    var source = new EnvVarSourceBuilder().withNewConfigMapKeyRef().withNewKey(name)
+                            .withNewName(stack.getConfigMapName()).endConfigMapKeyRef().build();
+                    return new EnvVarBuilder().withName(name).withValueFrom(source).build();
+                }).collect(Collectors.toSet())).build();
+        deployment = new DeploymentBuilder().withNewMetadata().withName(stack.getLabel()).withNamespace("default")
+                .addToLabels("app", stack.getLabel()).endMetadata().withNewSpec().withReplicas(1).withNewSelector()
+                .addToMatchLabels("app", stack.getLabel()).endSelector().withNewTemplate().withNewMetadata()
+                .withName(stack.getLabel()).addToLabels("app", stack.getLabel()).endMetadata().withNewSpec()
+                .addAllToContainers(Lists.newArrayList(container)).endSpec().endTemplate().endSpec().build();
     }
 
     @Override

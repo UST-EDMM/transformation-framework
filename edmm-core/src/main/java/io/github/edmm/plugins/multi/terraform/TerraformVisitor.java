@@ -66,7 +66,6 @@ public class TerraformVisitor implements ComponentVisitor, RelationVisitor {
                 // get basename
                 String basename = FilenameUtils.getName(artifact.getValue());
                 String newPath = "./files/" + comp.getNormalizedName() + "/" + basename;
-                logger.info("old filepath {}", artifact.getValue());
                 fileAccess.copy(artifact.getValue(), newPath);
             } catch (IOException e) {
                 logger.warn("Failedss to copy file '{}'", artifact.getValue());
@@ -100,11 +99,11 @@ public class TerraformVisitor implements ComponentVisitor, RelationVisitor {
             abolutePrivkeyPath = component.getPrivateKeyPath().get();
         } else {
             abolutePrivkeyPath = new File(context.getFileAccess().getSourceDirectory(),
-                component.getPrivateKeyPath().get()).getAbsolutePath();
+                    component.getPrivateKeyPath().get()).getAbsolutePath();
         }
 
         Openstack.Instance openstackInstance = Openstack.Instance.builder().name(component.getNormalizedName())
-            .keyName(component.getKeyName().get()).privKeyFile(abolutePrivkeyPath).build();
+                .keyName(component.getKeyName().get()).privKeyFile(abolutePrivkeyPath).build();
         List<String> operations = collectOperations(component);
         openstackInstance.addRemoteExecProvisioner(new RemoteExecProvisioner(operations));
         openstackInstance.addFileProvisioner(new FileProvisioner("./env.sh", "/opt/env.sh"));
@@ -144,12 +143,12 @@ public class TerraformVisitor implements ComponentVisitor, RelationVisitor {
         if (optionalCompute.isPresent()) {
             Compute hostingCompute = optionalCompute.get();
             Openstack.Instance openstackInstance = computeInstances.get(hostingCompute);
-            String[] blacklist = {"key_name", "public_key"};
+            String[] blacklist = { "key_name", "public_key" };
             component.getProperties().values().stream().filter(p -> !Arrays.asList(blacklist).contains(p.getName()))
-                .forEach(p -> {
-                    String name = (component.getNormalizedName() + "_" + p.getNormalizedName()).toUpperCase();
-                    openstackInstance.addEnvVar(name, p.getValue());
-                });
+                    .forEach(p -> {
+                        String name = (component.getNormalizedName() + "_" + p.getNormalizedName()).toUpperCase();
+                        openstackInstance.addEnvVar(name, p.getValue());
+                    });
         }
     }
 
@@ -164,7 +163,7 @@ public class TerraformVisitor implements ComponentVisitor, RelationVisitor {
     private List<String> collectOperations(RootComponent component) {
         List<String> operations = new ArrayList<>();
         Consumer<Operation> artifactsConsumer = op -> op.getArtifacts()
-            .forEach(artifact -> operations.add(artifact.getValue()));
+                .forEach(artifact -> operations.add(artifact.getValue()));
         component.getStandardLifecycle().getCreate().ifPresent(artifactsConsumer);
         component.getStandardLifecycle().getConfigure().ifPresent(artifactsConsumer);
         component.getStandardLifecycle().getStart().ifPresent(artifactsConsumer);
@@ -202,7 +201,7 @@ public class TerraformVisitor implements ComponentVisitor, RelationVisitor {
             }
             // Copy operations to target directory
             List<String> operations = openstackInstance.getRemoteExecProvisioners().stream()
-                .map(RemoteExecProvisioner::getScripts).flatMap(Collection::stream).collect(Collectors.toList());
+                    .map(RemoteExecProvisioner::getScripts).flatMap(Collection::stream).collect(Collectors.toList());
             for (String op : operations) {
                 try {
                     fileAccess.copy(op, op);

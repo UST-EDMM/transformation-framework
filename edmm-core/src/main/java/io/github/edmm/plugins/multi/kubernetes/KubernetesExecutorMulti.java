@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import io.github.edmm.core.DeploymentTechnology;
+import io.github.edmm.core.TopologyGraphHelper;
 import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.core.execution.ExecutionException;
 import io.github.edmm.core.transformation.TransformationException;
@@ -116,6 +117,10 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
 
     }
 
+    private String getLabel(String s) {
+        return s.replace("_", "-");
+    }
+
     private List<String> getStacks(ExecutionContext context) {
         Map<String, Object> values = context.getTransformation().getValues();
         return (List<String>) values.get(STACKS_ENTRY);
@@ -127,6 +132,7 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
         for (String stackName : this.stacks) {
             File compDir = new File(fileAccess, stackName);
             if (!compDir.exists()) {
+                logger.warn("stack {} does not exist", stackName);
                 continue;
             }
 
@@ -162,13 +168,15 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
                 if (!comp.isPresent()) {
                     throw new ExecutionException("could not find stack " + stackName);
                 }
-                deployConfigMap(stackName, comp.get().getProperties(), compDir, api);
+                var resolvedVars = TopologyGraphHelper
+                        .resolveComponentStackProperties(context.getTransformation().getTopologyGraph(), comp.get());
+                deployConfigMap(stackName, resolvedVars, compDir, api);
 
                 // deploy everything
                 logger.info("deployed configMap for {}", stackName);
-                deployDeployment(stackName, compDir, deploymentApi);
+                deployDeployment(getLabel(stackName), compDir, deploymentApi);
                 logger.info("deployed deployment for {}", stackName);
-                Optional<V1Service> service = deployService(stackName, compDir, api);
+                Optional<V1Service> service = deployService(getLabel(stackName), compDir, api);
                 logger.info("deployed service for {}", stackName);
 
                 // read output

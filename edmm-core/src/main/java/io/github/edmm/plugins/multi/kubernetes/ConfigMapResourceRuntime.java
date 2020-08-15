@@ -13,7 +13,7 @@ import io.kubernetes.client.util.Yaml;
 import lombok.var;
 
 public final class ConfigMapResourceRuntime implements KubernetesResource {
-    String[] blacklist = {"key_name", "public_key", "hostname"};
+    String[] blacklist = { "key_name", "public_key", "hostname" };
 
     private final String stackName;
     private final String namespace = "default";
@@ -29,7 +29,7 @@ public final class ConfigMapResourceRuntime implements KubernetesResource {
     public void build() {
 
         var configMapBuilder = new V1ConfigMapBuilder().withApiVersion("v1").withNewMetadata().withName(getName())
-            .withNamespace(namespace).endMetadata();
+                .withNamespace(namespace).endMetadata();
 
         for (var prop : props.entrySet()) {
 

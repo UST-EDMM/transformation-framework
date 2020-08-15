@@ -31,7 +31,8 @@ public class KubernetesResourceBuilder {
     private final Graph<RootComponent, RootRelation> dependencyGraph;
     private final PluginFileAccess fileAccess;
 
-    public KubernetesResourceBuilder(Container stack, Graph<RootComponent, RootRelation> dependencyGraph, PluginFileAccess fileAccess) {
+    public KubernetesResourceBuilder(Container stack, Graph<RootComponent, RootRelation> dependencyGraph,
+            PluginFileAccess fileAccess) {
         this.stack = stack;
         this.dependencyGraph = dependencyGraph;
         this.fileAccess = fileAccess;
@@ -56,7 +57,7 @@ public class KubernetesResourceBuilder {
     }
 
     private boolean matchesBlacklist(Map.Entry<String, Property> prop) {
-        String[] blacklist = {"*key_name*", "*public_key*", "hostname"};
+        String[] blacklist = { "*key_name*", "*public_key*", "hostname" };
         for (var blacklistVal : blacklist) {
             if (FilenameUtils.wildcardMatch(prop.getKey(), blacklistVal)) {
                 return true;
@@ -74,7 +75,8 @@ public class KubernetesResourceBuilder {
                 continue;
             }
             var envName = prop.getKey().toUpperCase();
-            if (prop.getValue().isComputed() || prop.getValue().getValue() == null || prop.getValue().getValue().startsWith("$")) {
+            if (prop.getValue().isComputed() || prop.getValue().getValue() == null
+                    || prop.getValue().getValue().startsWith("$")) {
                 stack.addEnvVarRuntime(envName);
             } else {
                 stack.addEnvVar(envName, prop.getValue().getValue());

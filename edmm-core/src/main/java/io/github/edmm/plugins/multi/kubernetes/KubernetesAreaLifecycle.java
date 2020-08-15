@@ -78,7 +78,7 @@ public class KubernetesAreaLifecycle extends AbstractLifecycle {
                 dependencyGraph.getReversedGraph());
         List<String> stackNames = StreamSupport
                 .stream(Spliterators.spliteratorUnknownSize(topologicalIterator, Spliterator.ORDERED), false)
-                .map(Container::getLabel).collect(Collectors.toList());
+                .map(Container::getName).collect(Collectors.toList());
         // Save stack names for later use
         context.putValue(STACKS_ENTRY, stackNames);
     }
