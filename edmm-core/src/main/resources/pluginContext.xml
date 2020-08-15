@@ -14,4 +14,5 @@
     <bean id="juju" class="io.github.edmm.plugins.juju.JujuPlugin"/>
     <bean id="saltstack" class="io.github.edmm.plugins.salt.SaltStackPlugin"/>
     <bean id="cfengine" class="io.github.edmm.plugins.cfengine.CFEnginePlugin"/>
+    <bean id="multi" class="io.github.edmm.plugins.multi.MultiPlugin"/>
 </beans>

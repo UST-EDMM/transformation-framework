@@ -14,5 +14,7 @@ public class AnsiblePlay {
     private boolean become;
     private String becomeUser;
     private Map<String, String> vars;
+    private List<String> runtimeVars;
     private List<AnsibleTask> tasks;
+    private List<AnsibleFile> files;
 }

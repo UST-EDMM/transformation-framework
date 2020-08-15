@@ -14,9 +14,11 @@ import io.github.edmm.model.DeploymentModel;
 import io.github.edmm.model.component.RootComponent;
 import io.github.edmm.model.parameters.UserInput;
 import io.github.edmm.model.relation.RootRelation;
+import io.github.edmm.plugins.multi.model_extensions.groupingGraph.Group;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -40,42 +42,48 @@ public final class TransformationContext {
     private Timestamp timestamp;
     private State state = State.READY;
 
+    @Getter
+    private Group group;
+
     private Set<UserInput> userInputs;
     private Map<String, Object> values;
 
     public TransformationContext(@NonNull DeploymentModel model, @NonNull DeploymentTechnology deploymentTechnology) {
-        this(UUID.randomUUID().toString(), model, deploymentTechnology, null, null);
+        this(UUID.randomUUID().toString(), model, deploymentTechnology, null, null, null);
     }
 
     public TransformationContext(@NonNull DeploymentModel model, @NonNull DeploymentTechnology deploymentTechnology,
                                  @Nullable File sourceDirectory, @Nullable File targetDirectory) {
-        this(UUID.randomUUID().toString(), model, deploymentTechnology, sourceDirectory, targetDirectory);
+        this(UUID.randomUUID().toString(), model, deploymentTechnology, sourceDirectory, targetDirectory, null);
     }
 
     public TransformationContext(@NonNull File input, @NonNull DeploymentTechnology deploymentTechnology,
                                  @Nullable File sourceDirectory, @Nullable File targetDirectory) {
-        this(UUID.randomUUID().toString(), null, deploymentTechnology, sourceDirectory, targetDirectory);
+        this(UUID.randomUUID().toString(), null, deploymentTechnology, sourceDirectory, targetDirectory, null);
         this.input = input;
     }
 
     public TransformationContext(@NonNull String inputAsString, @NonNull DeploymentTechnology deploymentTechnology,
                                  @Nullable File sourceDirectory, @Nullable File targetDirectory) {
-        this(UUID.randomUUID().toString(), null, deploymentTechnology, sourceDirectory, targetDirectory);
+        this(UUID.randomUUID().toString(), null, deploymentTechnology, sourceDirectory, targetDirectory, null);
         this.inputAsString = inputAsString;
     }
 
-    private TransformationContext(String id, DeploymentModel model, DeploymentTechnology deploymentTechnology,
-                                  @Nullable File sourceDirectory, @Nullable File targetDirectory) {
+    public TransformationContext(String id, DeploymentModel model, DeploymentTechnology deploymentTechnology,
+                                 @Nullable File sourceDirectory, @Nullable File targetDirectory, @Nullable Group group) {
         this.id = id;
         this.model = model;
         this.deploymentTechnology = deploymentTechnology;
         this.sourceDirectory = sourceDirectory;
         this.targetDirectory = targetDirectory;
         this.timestamp = new Timestamp(System.currentTimeMillis());
+        this.group = group;
     }
 
     public static TransformationContext of(File directory) {
+
         File file = new File(directory, CONTEXT_FILENAME);
+        System.out.println(file.toString());
         if (!file.isFile() || !directory.canRead()) {
             throw new IllegalStateException(String.format("Cannot read context from file '%s'", file));
         }
@@ -123,7 +131,7 @@ public final class TransformationContext {
 
     public void setErrorState(Exception e) {
         this.state = State.ERROR;
-        this.putValue("exception",e);
+        this.putValue("exception", e);
     }
 
     /**
@@ -132,7 +140,7 @@ public final class TransformationContext {
      */
     public void throwExceptionIfErrorState() throws Exception {
         Exception e = (Exception) this.getValue("exception");
-        if (this.state == State.ERROR &&  e != null) {
+        if (this.state == State.ERROR && e != null) {
             throw e;
         }
     }

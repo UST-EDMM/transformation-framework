@@ -33,6 +33,10 @@ public abstract class JsonHelper {
     public static <T> T readValue(File file, Class<T> clazz) {
         try {
             String json = FileUtils.readFileToString(file, "UTF-8");
+            if (mapper == null) {
+                mapper = new ObjectMapper();
+                mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            }
             return mapper.readValue(json, clazz);
         } catch (Exception e) {
             throw new IllegalArgumentException(e);

@@ -21,6 +21,8 @@ public final class Container {
 
     private String baseImage;
     private Map<String, String> envVars = new HashMap<>();
+    //the variables that will only be known at runtime
+    private List<String> envVarsRuntime = new ArrayList<>();
     private List<String> runtimeEnvVars = new ArrayList<>();
     private List<FileMapping> artifacts = new ArrayList<>();
     private List<PortMapping> ports = new ArrayList<>();
@@ -68,6 +70,10 @@ public final class Container {
 
     public void addEnvVar(String name, String value) {
         envVars.put(name, value);
+    }
+
+    public void addEnvVarRuntime(String name) {
+        envVarsRuntime.add(name);
     }
 
     public void addRuntimeEnvVar(String name) {

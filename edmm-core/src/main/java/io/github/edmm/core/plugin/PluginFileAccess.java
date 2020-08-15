@@ -130,6 +130,19 @@ public class PluginFileAccess {
         }
     }
 
+    /*
+    this method looks in the target directory not in source one
+   */
+    public String readToStringTargetDir(String relativePath)throws IOException {
+        File file = new File(targetDirectory, relativePath);
+        try {
+            return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            logger.error("Failed to read content from file '{}'", file);
+            throw e;
+        }
+    }
+
     /**
      * Returns the absolute path of a file in the target directory
      *

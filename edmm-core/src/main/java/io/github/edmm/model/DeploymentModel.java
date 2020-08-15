@@ -11,11 +11,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import io.github.edmm.core.parser.EntityGraph;
+import io.github.edmm.core.parser.MappingEntity;
 import io.github.edmm.core.transformation.TransformationException;
 import io.github.edmm.model.component.RootComponent;
 import io.github.edmm.model.relation.HostedOn;
 import io.github.edmm.model.relation.RootRelation;
 import io.github.edmm.model.support.TypeWrapper;
+import io.github.edmm.plugins.multi.Technology;
+import io.github.edmm.plugins.multi.model_extensions.OrchestrationTechnologyMapping;
 
 import com.amazonaws.util.StringInputStream;
 import lombok.Getter;
@@ -50,6 +53,21 @@ public final class DeploymentModel {
         initEdges();
     }
 
+    @SneakyThrows
+    public static DeploymentModel of(@NonNull File file) {
+        if (!file.isFile() || !file.canRead()) {
+            throw new IllegalStateException(String.format("File '%s' does not exist - failed to construct internal graph", file));
+        }
+        EntityGraph graph = new EntityGraph(new FileInputStream(file));
+        return new DeploymentModel(file.getName(), graph);
+    }
+
+    @SneakyThrows
+    public static DeploymentModel of(@NonNull String yaml) {
+        EntityGraph graph = new EntityGraph(new StringInputStream(yaml));
+        return new DeploymentModel(UUID.randomUUID().toString(), graph);
+    }
+
     private void initNodes() {
         componentMap.forEach((name, component) -> {
             topology.addVertex(component);
@@ -70,21 +88,6 @@ public final class DeploymentModel {
         }
     }
 
-    @SneakyThrows
-    public static DeploymentModel of(@NonNull File file) {
-        if (!file.isFile() || !file.canRead()) {
-            throw new IllegalStateException(String.format("File '%s' does not exist - failed to construct internal graph", file));
-        }
-        EntityGraph graph = new EntityGraph(new FileInputStream(file));
-        return new DeploymentModel(file.getName(), graph);
-    }
-
-    @SneakyThrows
-    public static DeploymentModel of(@NonNull String yaml) {
-        EntityGraph graph = new EntityGraph(new StringInputStream(yaml));
-        return new DeploymentModel(UUID.randomUUID().toString(), graph);
-    }
-
     public Set<RootComponent> getComponents() {
         return topology.vertexSet();
     }
@@ -103,6 +106,18 @@ public final class DeploymentModel {
             throw new TransformationException("The given topology has cycles");
         }
         return topology;
+    }
+
+    public Optional<OrchestrationTechnologyMapping> getTechnologyMapping() {
+        return graph.getOrchestrationTechnologyEntity()
+            .map(entity -> new OrchestrationTechnologyMapping((MappingEntity) entity, getComponents()));
+
+    }
+
+    public Technology getTechnology(RootComponent component) {
+        Optional<Map<RootComponent, Technology>> deploymentTechList = getTechnologyMapping()
+            .map(OrchestrationTechnologyMapping::getTechForComponents);
+        return deploymentTechList.map(c -> c.get(component)).orElse(Technology.UNDEFINED);
     }
 
     public EdgeReversedGraph<RootComponent, RootRelation> getReversedTopology() {

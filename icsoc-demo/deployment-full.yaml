@@ -1,0 +1,188 @@
+---
+version: edm_1_0
+
+orchestration_technology:
+    ansible:
+        - db
+        - dbms
+    terraform:
+        - ubuntu_db
+
+    kubernetes:
+        - ubuntu_app
+        - pet_clinic_tomcat
+        - pet_clinic
+components:
+    ## Spring PetClinic Application
+
+    pet_clinic:
+        type: web_application
+        artifacts:
+            - war: ./files/petclinic/petclinic.war
+        operations:
+            configure: ./files/petclinic/configure.sh
+        relations:
+            - hosted_on: pet_clinic_tomcat
+            - connects_to: db
+        properties:
+            db_hostname: ${db.hostname}
+            db_user: ${db.user}
+            db_password: ${db.password}
+            db_port: ${db.port}
+
+    pet_clinic_tomcat:
+        type: tomcat
+        operations:
+            create: ./files/tomcat/create.sh
+            start: ./files/tomcat/start.sh
+        relations:
+            - hosted_on: ubuntu_app
+
+    ## Database
+
+    db:
+        type: mysql_database
+        properties:
+            schema_name: petclinic
+            user: pc
+            password: petclinic
+        artifacts:
+            - sql: ./files/petclinic/schema.sql
+        operations:
+            configure: ./files/mysql_database/configure.sh
+        relations:
+            - hosted_on: dbms
+
+    dbms:
+        type: mysql_dbms
+        properties:
+            root_password: petclinic
+        operations:
+            create: ./files/mysql_dbms/create.sh
+            start: ./files/mysql_dbms/start.sh
+        relations:
+            - hosted_on: ubuntu_db
+
+    ## Compute
+
+    ubuntu_app:
+        type: compute
+        properties:
+            machine_image: ubuntu
+            instance_type: large
+            key_name: win10key
+            priv_key_path: ./files/ubuntu/key.pem
+        artifacts:
+            - provider: ./files/ubuntu/openstack.json
+
+    ubuntu_db:
+        type: compute
+        properties:
+            machine_image: ubuntu
+            instance_type: large
+            key_name: win10key
+            priv_key_path: ./files/ubuntu/key.pem
+        artifacts:
+            - provider: ./files/ubuntu/openstack.json
+
+###############################################
+## Component Types
+###############################################
+component_types:
+    ## Generic Types
+
+    base:
+        extends: null
+        description: The base type
+        metadata: {}
+        operations:
+            create: ~
+            configure: ~
+            start: ~
+            stop: ~
+            delete: ~
+
+    software_component:
+        extends: base
+
+    compute:
+        extends: base
+        properties:
+            os_family:
+                type: string
+                description: Specifies the type of operating system
+                default_value: linux
+            machine_image:
+                type: string
+                description: The name of the machine image to use
+            instance_type:
+                type: string
+                description: The name of the instance type to provision
+            key_name:
+                type: string
+                description: The name of the key pair to use for authentication
+            public_key:
+                type: string
+                description: The public key of the key pair to use for authentication
+
+    web_server:
+        extends: software_component
+        properties:
+            port:
+                type: integer
+                default_value: 80
+
+    web_application:
+        extends: base
+
+    dbms:
+        extends: software_component
+        properties:
+            port:
+                type: integer
+            root_password:
+                type: string
+
+    database:
+        extends: base
+        properties:
+            schema_name:
+                type: string
+            user:
+                type: string
+            password:
+                type: string
+
+    ## Technology-specific Types
+
+    tomcat:
+        extends: web_server
+        properties:
+            port:
+                type: integer
+                default_value: 8080
+
+    mysql_dbms:
+        extends: dbms
+        properties:
+            port:
+                type: integer
+                default_value: 3306
+
+    mysql_database:
+        extends: database
+
+###############################################
+## Relation Types
+###############################################
+relation_types:
+    depends_on:
+        extends: null
+        properties: {}
+        operations: {}
+
+    hosted_on:
+        extends: depends_on
+
+    connects_to:
+        extends: depends_on

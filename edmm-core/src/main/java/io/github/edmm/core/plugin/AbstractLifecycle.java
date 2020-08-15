@@ -41,4 +41,8 @@ public abstract class AbstractLifecycle implements PluginLifecycle, LifecyclePha
     public List<LifecyclePhase<?>> getLifecyclePhases() {
         return phases;
     }
+
+    public TransformationContext getTransformationContext() {
+        return context;
+    }
 }
