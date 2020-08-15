@@ -168,8 +168,8 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
                 if (!comp.isPresent()) {
                     throw new ExecutionException("could not find stack " + stackName);
                 }
-                var resolvedVars = TopologyGraphHelper
-                        .resolveComponentStackProperties(context.getTransformation().getTopologyGraph(), comp.get());
+                var resolvedVars = TopologyGraphHelper.resolvePropertyReferences(
+                        context.getTransformation().getTopologyGraph(), comp.get(), comp.get().getProperties());
                 deployConfigMap(stackName, resolvedVars, compDir, api);
 
                 // deploy everything
