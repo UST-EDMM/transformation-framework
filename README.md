@@ -1,87 +1,97 @@
 # EDMM Transformation and Deployment Framework
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Build Status](https://travis-ci.org/UST-EDMM/edmm.svg?branch=master)](https://travis-ci.org/UST-EDMM/edmm)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d46d2287b3084689be0247e1aed91bc9)](https://www.codacy.com/manual/miwurster/edmm?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=UST-EDMM/edmm&amp;utm_campaign=Badge_Grade)
-[![JitPack](https://jitpack.io/v/UST-EDMM/transformation-framework.svg)](https://jitpack.io/#UST-EDMM/edmm)
+> Transformation framework for the Essential Deployment Metamodel.
 
-EDMM provides a declarative model describing the components to be deployed, their configurations, required artifacts, and relations among them.
-The resulting EDMM model is independent of any specific deployment technology and can be exported from an EDMM-enabled modeling tool or created directly using a text editor according to the respective YAML specification.
-This model can be fed into the EDMM Transformation and Deployment Framework, which provides a command-line interface (CLI) that can either be used directly by the user or integrated into any automation workflow.
-The CLI can be used to select the desired target deployment technology into which the EDMM model is to be transformed.
-The output is an executable technology-specific deployment model that can be executed with the selected technology.
-The following figure shows an high-level overview of the EDMM Transformation Framework.
-
-
-
-## Transformation 
-
-![](docs/overview.png)
-
-[Link to the video: https://youtu.be/MGWBFomOGYU](https://youtu.be/MGWBFomOGYU)
-
-The demo is split into two parts.
-First, we start with the EDMM Modeling Tool, which is based on [Eclipse Winery](https://github.com/eclipse/winery), in order to graphically model an EDMM-based application deployment.
-The EDMM Modeling Tool is able to export an EDMM YAML file according to the [specification](https://github.com/UST-EDMM/spec-yaml).
-After the EDMM model has been downloaded it can be fed into the EDMM Transformation Framework.
-For example, to convert the supported scenario into Kubernetes resource files one can run the `edmm` CLI tool as follows:
+## Example
 
 ```shell
-edmm transform kubernetes ./edmm-model.yml
+edmm transform multi icsoc-demo/deployment-full.yaml
 ```
 
-The generated Kubernetes resource files are located relative to the `edmm_model.yml` file inside a `kubernetes` directory.
-For the supported scenario, the tool will create two separate Kubernetes stacks, each consisting of a Service resource, a Deployment resource wired with the service, and a generated `Dockerfile` containing the layers expressed by the EDMM model.
-By building the Docker images (`docker build -t <name> .`) one can apply the Kubernetes resources to a cluster (`kubectl apply -f <files>`).
+The generated Kubernetes resource files are located relative to the `edmm_model.yml` file inside a `multi` directory.
+This will create a stack for the petclinic demo application including the underlying tomcat. 
+Because kubernetes is chosen as the technology a configmap-,service- and deployment-file is added.
+For the second "stack" first an openstack compute instance is deployed. Then the software is installed with ansible.
+For this to work the openstack-provider infos have to be provided.
 
-
+### infos
+- compute instance deployed with terraform needs a provider.json
+- localhost:32000 is hardcoded as image repo
+- default kubernetes context is used
 
 ## Usage
+The transformation can be started by using the `transform` command of the `edmm` tool: `edmm transform multi <input>`.
+For a deployment with multiple technologies the transform target is always "multi". Which technology is used exactly can be specified in the deployment model.
+The generated technology-specific deployment models will be stored relative to the YAML input file. Every orchestration step has its own folder.
+After the files are created the deployment can be started when the command line shows 
+`Enter y to continue with orchestration`. After pressing y it begins.
 
-The final distribution package can be downloaded form the [releases](https://github.com/UST-EDMM/transformation-framework/releases) page.
-Extract the files to a location on your filesystem and add it to your path variable (Linux: `$PATH`, Windows: `%PATH%`).
-Afterwards you can invoke the `edmm` command from a command prompt.
+## What happens?
 
-The transformation framework supports YAML files as input, according to the published [YAML specification](https://github.com/UST-EDMM/spec-yaml).
-Specified components, and their respective component types, must be supplied in a single file at the moment.
-However, we introduce a couple of built-in component types that can be used to model an application deployment.
-An [example](edmm-core/src/test/resources/templates/scenario_iaas.yml) shows the usage of the built-in types to model an application deployment based on virtual compute resources, e.g., virtual machines having some software components installed.
-
-The transformation can be started by using the `transform` command of the `edmm` tool: `edmm transform <target> <input>`.
-You have to specify the `target` technology (e.g., one of "ansible", "azure", "chef", "compose", "heat", "kubernetes", "terraform") and the `input` EDMM YAML model file.
-The generated technology-specific deployment models will be stored relative to the YAML input file.
+At first the multi plugin is called(should be lifted up maybe?). 
+Here, two special phases are `transform` and `execution`.
 
 
-
-## Plugins
-
-Each plugin implements its own transformation logic by providing a respective `Plugin` implementation.
-Further, a plugin implements different lifecycle methods, e.g., `checkModel()`, `prepare()`, and `cleanup()`, but must provide an implementation for the `transform()` method.
-Currently we support the following list of plugins:
-
-* [Ansible](edmm-core/src/main/java/io/github/edmm/plugins/ansible)
-* [Azure Resource Manager](edmm-core/src/main/java/io/github/edmm/plugins/azure)
-* [Chef](edmm-core/src/main/java/io/github/edmm/plugins/chef)
-* [Docker Compose](edmm-core/src/main/java/io/github/edmm/plugins/compose)
-* [Heat Orchestration Template](edmm-core/src/main/java/io/github/edmm/plugins/heat)
-* [Kubernetes](edmm-core/src/main/java/io/github/edmm/plugins/kubernetes)
-* [Terraform](edmm-core/src/main/java/io/github/edmm/plugins/terraform)
-* [Puppet](edmm-core/src/main/java/io/github/edmm/plugins/puppet)
-* [Cloudify](edmm-core/src/main/java/io/github/edmm/plugins/cloudify)
-* [AWS CloudFormation](edmm-core/src/main/java/io/github/edmm/plugins/cfn)
-* [Salt](edmm-core/src/main/java/io/github/edmm/plugins/salt)
-* [Juju](edmm-core/src/main/java/io/github/edmm/plugins/juju)
-* [CFEngine](edmm-core/src/main/java/io/github/edmm/plugins/cfengine)
-
-The corresponding plugin README.md contains detailed information of the transformation rules each plugin employs.
+The phases are called from `edmm-core/src/main/java/io/github/edmm/plugins/multi/MultiLifecycle.java`.
+Most of the implementation is in `edmm-core/src/main/java/io/github/edmm/plugins/multi/`.
 
 
+### Transform
+`edmm-core/src/main/java/io/github/edmm/plugins/multi/MultiLifecycle.java`(transform)
+The first step is to select components that use the same technology and no cycle exists when they are merged.
+The result is a sorted list of groups.
+As a next step a execution plan/worflow is created. Here the sorted groups with their components are written down `execution.plan.json` with a defined order.
 
-## Built-in Types
+As a next step for every group a lifecycle with a transformation context is created.
+The context contains on one hand the whole deployment model and on the other handThe group that this call is responsible for
+Additionally, the target directory where the technology specific models will be placed.
+The access to the whole deployment is necessary, through relations other properties may be needed here.
+Then all lifecycle phases are called. (modelcheck,prepare,transform,cleanup...).
+This could be made cleaner?:
 
-The framework provides built-in types that can be used to model in EDMM.
-Simply copy and paste the [types](docs/types.yml) to your model file.
-An example showing the usage of these types is available [here](edmm-core/src/test/resources/templates/scenario_iaas.yml).
+
+Valid for all techs:
+- Environment variables from hosted_on are used transitively and keep their name
+- Env vars from other connections are not used automatically and need to be called explicitly syntax see model
+    - this can be changed with a few lines in 
+This can be changed in `TopologyGraphHelper.findAllProperties`. 
+
+
+[Kubernetes](kubernetes.md)
+[Ansible](ansible.md)
+[Terraform](terraform.md)
+
+
+
+### Execution
+`edmm-core/src/main/java/io/github/edmm/plugins/multi/MultiLifecycle.java`(execute)
+
+The orchestration step reads the plan `execution.plan.json`. Here the groups and their technology are defined.
+These are read and then the corresponing model is executed. 
+
+The execution works as follows:
+Loop over all groups in order
+1. First collect the needed runtime properties 
+2. call technology specific plugin with runtime properties as info
+3. write back properties to model(done in plugins already)
+
+After every step the `state.yaml` is updated to reflect the new infos.
+
+[Kubernetes](kubernetes.md)
+[Ansible](ansible.md)
+[Terraform](terraform.md)
+
+### remarks
+some of the classes are copy pasted and changed for the needs of multi deployment without breaking everything else.
+For example the Terraformvisitor
+
+### possible future work
+- decpouple execution from transformation
+- new instance model after transformation
+- improve plugin usage
+
+    
+
 
 ## Build the project
 
@@ -89,11 +99,4 @@ We use Maven as our build tool:
 
 ```shell
 ./mvnw clean package
-```
-
-Build the `edmm-web` Docker image:
-
-```shell
-docker build -t edmm-web -f .\edmm-web\Dockerfile .
-docker run -it -p 5000:5000 edmm-web
 ```
