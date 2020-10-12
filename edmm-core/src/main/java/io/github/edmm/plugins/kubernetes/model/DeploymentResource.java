@@ -37,7 +37,7 @@ public final class DeploymentResource implements KubernetesResource {
                 .addAllToPorts(stack.getPorts().stream().map(PortMapping::toContainerPort).collect(Collectors.toList()))
                 .addAllToEnv(stack.getEnvVars().entrySet().stream().map(e -> new EnvVar(e.getKey(), e.getValue(), null))
                         .collect(Collectors.toSet()))
-                .addAllToEnv(stack.getRuntimeEnvVars().stream().map(name -> {
+                .addAllToEnv(stack.getEnvVarsRuntime().stream().map(name -> {
                     var source = new EnvVarSourceBuilder().withNewConfigMapKeyRef().withNewKey(name)
                             .withNewName(stack.getConfigMapName()).endConfigMapKeyRef().build();
                     return new EnvVarBuilder().withName(name).withValueFrom(source).build();

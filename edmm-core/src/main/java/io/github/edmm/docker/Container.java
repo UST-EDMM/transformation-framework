@@ -23,7 +23,6 @@ public final class Container {
     private Map<String, String> envVars = new HashMap<>();
     //the variables that will only be known at runtime
     private List<String> envVarsRuntime = new ArrayList<>();
-    private List<String> runtimeEnvVars = new ArrayList<>();
     private List<FileMapping> artifacts = new ArrayList<>();
     private List<PortMapping> ports = new ArrayList<>();
     private List<FileMapping> operations = new ArrayList<>();
@@ -33,7 +32,7 @@ public final class Container {
         this.components = new ArrayList<>(stack.components);
         this.baseImage = stack.baseImage;
         this.envVars = new HashMap<>(stack.envVars);
-        this.runtimeEnvVars = new ArrayList<>(stack.runtimeEnvVars);
+        this.envVarsRuntime = new ArrayList<>(stack.envVarsRuntime);
         this.artifacts = new ArrayList<>(stack.artifacts);
         this.ports = new ArrayList<>(stack.ports);
         this.operations = new ArrayList<>(stack.operations);
@@ -77,7 +76,7 @@ public final class Container {
     }
 
     public void addRuntimeEnvVar(String name) {
-        runtimeEnvVars.add(name);
+        envVarsRuntime.add(name);
     }
 
     public void addArtifact(FileMapping mapping) {
