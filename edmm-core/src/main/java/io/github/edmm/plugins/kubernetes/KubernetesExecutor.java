@@ -8,7 +8,7 @@ import java.util.Map;
 import io.github.edmm.core.DeploymentTechnology;
 import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.plugins.DeploymentExecutor;
-import io.github.edmm.plugins.multi.model.OutputProperties;
+import io.github.edmm.plugins.multi.model.ComponentProperties;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -40,7 +40,7 @@ public class KubernetesExecutor extends DeploymentExecutor {
     }
 
     @Override
-    public List<OutputProperties> executeWithOutputProperty() throws Exception {
+    public List<ComponentProperties> executeWithOutputProperty() throws Exception {
         return null;
     }
 

@@ -11,7 +11,5 @@ public class SendDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution delegateExecution) throws Exception {
         CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
-        camundaRestExchange.sendVariables();
-
     }
 }

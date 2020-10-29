@@ -3,13 +3,17 @@ package io.github.edmm.web.service;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 import io.github.edmm.core.transformation.TransformationContext;
 import io.github.edmm.core.transformation.TransformationService;
 import io.github.edmm.model.DeploymentModel;
 import io.github.edmm.plugins.multi.MultiLifecycle;
+import io.github.edmm.plugins.multi.model.ComponentProperties;
+import io.github.edmm.web.model.DeployRequest;
+import io.github.edmm.web.model.DeployResult;
 import io.github.edmm.web.model.TransformationRequest;
-import io.github.edmm.web.model.TriggerRequest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,20 +58,29 @@ public class OrchestrationHandler {
     /**
      * Prepares the execution by retrieving the temporary saved transformation context
      * and passing the retrieved environment variables to the Multilifecycle
-     * @param triggerRequest Valid RequestBody
+     * @param deployRequest Valid RequestBody
      */
-    @Async
-    public void prepareExecution(TriggerRequest triggerRequest) {
+    public DeployResult prepareExecution(DeployRequest deployRequest) {
 
         // Retrieves the saved transformation context
-        MultiLifecycle multiLifecycle = new MultiLifecycle(triggerRequest.getMultiId());
+        MultiLifecycle multiLifecycle = new MultiLifecycle(deployRequest.getModelId());
 
         // If transformation context is available, then prepare execution in Multilifecycle
-        if (multiLifecycle.isTransformationContextAvailable(triggerRequest.getMultiId())) {
-            multiLifecycle.assignRuntimeVariablesToLifecycles(triggerRequest.getSourceComponent(),
-                triggerRequest.getTargetComponent(), triggerRequest.getEnvironmentVariables());
+        if (multiLifecycle.isTransformationContextAvailable(deployRequest.getModelId())) {
+
+            if (deployRequest.getCorrelationId() == null) {
+                UUID uuid = UUID.randomUUID();
+                deployRequest.setCorrelationId(uuid);
+            }
+
+            List<ComponentProperties> properties =
+                multiLifecycle.assignRuntimeVariablesToLifecycles(deployRequest.getComponents(),
+                deployRequest.getInputs());
+
+            return new DeployResult(deployRequest.getModelId(),
+                deployRequest.getCorrelationId(),
+                properties);
         }
-
+        return null;
     }
-
 }

@@ -25,6 +25,7 @@ import io.github.edmm.plugins.multi.ansible.AnsibleAreaLifecycle;
 import io.github.edmm.plugins.multi.ansible.AnsibleExecutor;
 import io.github.edmm.plugins.multi.kubernetes.KubernetesAreaLifecycle;
 import io.github.edmm.plugins.multi.kubernetes.KubernetesExecutorMulti;
+import io.github.edmm.plugins.multi.model.ComponentProperties;
 import io.github.edmm.plugins.multi.model.ComponentResources;
 import io.github.edmm.plugins.multi.model.Plan;
 import io.github.edmm.plugins.multi.model.PlanStep;
@@ -166,15 +167,14 @@ public class MultiLifecycle extends AbstractLifecycle {
     /**
      * Assigns the sent process variables by Camunda to the specific lifecycle graphs
      *
-     * @param sourceComponent Source component that has to be updated
-     * @param targetComponent Target component that has to be updated
-     * @param variables Sent process variables by Camunda
      */
-    public void assignRuntimeVariablesToLifecycles(String sourceComponent, String targetComponent,
-                                                   Map<String, String> variables) {
+    public List<ComponentProperties> assignRuntimeVariablesToLifecycles(ArrayList<String> components,
+                                                                        ArrayList<ComponentProperties> inputs) {
+        // Populate input properties to respective components
+        inputs.forEach(component -> populateInputProperties(component.getComponent(), component.getProperties()));
 
-        updateSourceComponent(sourceComponent, variables);
-        updateTargetComponentAndExecute(targetComponent, variables);
+        // Deploy all components
+        return deployComponents(components);
 
     }
 
@@ -182,32 +182,30 @@ public class MultiLifecycle extends AbstractLifecycle {
      * Updates the target component by the sent process variables and executes
      * the specified technology of the target component
      *
-     * @param targetComponent Target component that has to be updated
-     * @param variables Sent process variables by Camunda
      */
-    public void updateTargetComponentAndExecute(String targetComponent, Map<String, String> variables) {
+    public List<ComponentProperties> deployComponents(ArrayList<String> components) {
 
         AbstractLifecycle targetLifecycle = null;
 
         // Looks up the lifecycle of the target component and assigns them to targetLifecycle
         for (AbstractLifecycle groupLifecycle : groupLifecycles) {
             for (var component : groupLifecycle.getTransformationContext().getGroup().groupComponents) {
-                if (component.getName().equals(targetComponent)) {
+
+                // Since it does not matter, which component is chosen from the Arraylist
+                // The component itself knows which technology and other components are part of it
+                if (component.getName().equals(components.get(0))) {
                     targetLifecycle = groupLifecycle;
                 }
+
             }
         }
 
         // If targetLifecycle is available, the target component is queried and updated with the sent process variables
         if (targetLifecycle != null) {
             Technology technology = targetLifecycle.getTransformationContext().getGroup().getTechnology();
-            targetLifecycle.getTransformationContext().getGroup().groupComponents.forEach(component -> {
-
-                //updateVariables(component, variables);
-            });
-
-            executeTechnology(targetLifecycle, technology);
+            return executeTechnology(targetLifecycle, technology);
         }
+        return null;
     }
 
     /**
@@ -216,7 +214,7 @@ public class MultiLifecycle extends AbstractLifecycle {
      * @param lifecycle Specific lifecycle of the technology created by the workflow generation
      * @param technology Specific technology that has to be executed with given lifecycle
      */
-    public void executeTechnology(AbstractLifecycle lifecycle, Technology technology) {
+    public List<ComponentProperties> executeTechnology(AbstractLifecycle lifecycle, Technology technology) {
 
         DeploymentExecutor visitorContext;
         ExecutionContext orchContext = new ExecutionContext(lifecycle.getTransformationContext());
@@ -232,28 +230,28 @@ public class MultiLifecycle extends AbstractLifecycle {
         }
         logger.info("execute next tech");
         try {
-            System.out.println(visitorContext.executeWithOutputProperty());
+            return visitorContext.executeWithOutputProperty();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        return null;
     }
 
     /**
-     * Updates the source component by the sent process variables
+     * Updates the source component by the sent process properties
      *
-     * @param sourceComponent Source component that has to be updated
-     * @param variables Sent process variables by Camunda
+     * @param component Source component that has to be updated
+     * @param properties Sent process properties by Camunda
      */
-    public void updateSourceComponent(String sourceComponent, Map<String, String> variables) {
+    public void populateInputProperties(String component, Map<String, String> properties) {
 
         // Determine the source component and update the graph
         for (AbstractLifecycle groupLifecycle : groupLifecycles) {
-            groupLifecycle.getTransformationContext().getGroup().groupComponents.forEach(component -> {
+            groupLifecycle.getTransformationContext().getGroup().groupComponents.forEach(lifecycleComponent -> {
 
-                if (component.getName().equals(sourceComponent)) {
-                    updateVariables(component, variables);
+                if (lifecycleComponent.getName().equals(component)) {
+                    updateVariables(lifecycleComponent, properties);
                 }
             });
         }

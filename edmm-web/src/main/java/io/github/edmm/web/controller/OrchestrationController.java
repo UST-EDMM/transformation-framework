@@ -2,8 +2,9 @@ package io.github.edmm.web.controller;
 
 import javax.validation.Valid;
 
+import io.github.edmm.web.model.DeployRequest;
+import io.github.edmm.web.model.DeployResult;
 import io.github.edmm.web.model.TransformationRequest;
-import io.github.edmm.web.model.TriggerRequest;
 import io.github.edmm.web.service.OrchestrationHandler;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,10 +38,9 @@ public class OrchestrationController {
     }
 
     @Operation(summary = "Triggers the technology with a given multi id and environment variables")
-    @PostMapping(value = "/trigger", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> trigger(@Valid @RequestBody TriggerRequest triggerRequest) {
-        orchestrationHandler.prepareExecution(triggerRequest);
-        return ResponseEntity.ok().build();
+    @PostMapping(value = "/deploy", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DeployResult> deploy(@Valid @RequestBody DeployRequest deployRequest) {
+        return ResponseEntity.ok().body(orchestrationHandler.prepareExecution(deployRequest));
     }
 
 }

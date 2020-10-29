@@ -17,7 +17,7 @@ import io.github.edmm.core.transformation.TransformationException;
 import io.github.edmm.model.Property;
 import io.github.edmm.model.component.RootComponent;
 import io.github.edmm.plugins.DeploymentExecutor;
-import io.github.edmm.plugins.multi.model.OutputProperties;
+import io.github.edmm.plugins.multi.model.ComponentProperties;
 import io.github.edmm.utils.Consts;
 
 import io.kubernetes.client.ApiClient;
@@ -39,7 +39,7 @@ import static io.github.edmm.plugins.kubernetes.KubernetesPlugin.STACKS_ENTRY;
 public class KubernetesExecutorMulti extends DeploymentExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesExecutorMulti.class);
-    private final List<OutputProperties> outputProperties = new ArrayList<>();
+    private final List<ComponentProperties> properties = new ArrayList<>();
     private final List<String> stacks;
 
     public KubernetesExecutorMulti(ExecutionContext context, DeploymentTechnology deploymentTechnology) {
@@ -200,12 +200,12 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
                 outputVariables.put("hostname", service.get().getSpec().getClusterIP());
                 comp.get().addProperty("hostname", service.get().getSpec().getClusterIP());
 
-                OutputProperties outputPropertiess = new OutputProperties(
+                ComponentProperties propertiess = new ComponentProperties(
                     stackName,
                     outputVariables
                 );
 
-                outputProperties.add(outputPropertiess);
+                properties.add(propertiess);
 
             } catch (IOException e) {
                 logger.error("could not deploy comp: {}", stackName);
@@ -221,19 +221,16 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
             }
         }
 
-        outputProperties.forEach(x -> {
+        properties.forEach(x -> {
             System.out.println(x.getComponent());
             System.out.println(x.getProperties());
         });
 
-        String lastComponentOfStack = this.stacks.get(this.stacks.size() - 1);
-        //CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
-        //camundaRestExchange.completeTask(lastComponentOfStack, outputVariables);
     }
 
-    public List<OutputProperties> executeWithOutputProperty() {
+    public List<ComponentProperties> executeWithOutputProperty() {
         deploy();
-        return outputProperties;
+        return properties;
     }
 
     @Override

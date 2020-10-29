@@ -13,7 +13,7 @@ import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.model.Artifact;
 import io.github.edmm.model.Property;
 import io.github.edmm.plugins.DeploymentExecutor;
-import io.github.edmm.plugins.multi.model.OutputProperties;
+import io.github.edmm.plugins.multi.model.ComponentProperties;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 public class TerraformExecutor extends DeploymentExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(TerraformExecutor.class);
-    private final List<OutputProperties> outputProperties = new ArrayList<>();
+    private final List<ComponentProperties> properties = new ArrayList<>();
 
     public TerraformExecutor(ExecutionContext context, DeploymentTechnology deploymentTechnology) {
         super(context, deploymentTechnology);
@@ -42,7 +42,6 @@ public class TerraformExecutor extends DeploymentExecutor {
         ProcessBuilder pb = new ProcessBuilder();
         pb.inheritIO();
         pb.directory(context.getDirectory());
-        String lastComponent = null;
 
         for (var component : context.getTransformation().getGroup().groupComponents) {
             List<Artifact> providerInfo = component.getArtifacts().stream().filter(a -> a.getName().equals("provider"))
@@ -99,26 +98,23 @@ public class TerraformExecutor extends DeploymentExecutor {
                     prop.setValue(computed_prop.getValue());
                 }
                 outputVariables.put(computed_prop.getKey(), computed_prop.getValue());
-                OutputProperties outputPropertiess = new OutputProperties(
+                ComponentProperties propertiess = new ComponentProperties(
                     component.getName(),
                     outputVariables
                 );
-                outputProperties.add(outputPropertiess);
+                this.properties.add(propertiess);
             }
-            lastComponent = component.getNormalizedName();
         }
 
-        System.out.println(outputProperties);
-        System.out.println(outputProperties.get(0).getComponent());
-        System.out.println(outputProperties.get(0).getProperties());
+        System.out.println(properties);
+        System.out.println(properties.get(0).getComponent());
+        System.out.println(properties.get(0).getProperties());
 
-        //CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
-        //camundaRestExchange.completeTask(lastComponent, outputVariables);
     }
 
-    public List<OutputProperties> executeWithOutputProperty() throws Exception {
+    public List<ComponentProperties> executeWithOutputProperty() throws Exception {
         deploy();
-        return outputProperties;
+        return properties;
     }
 
     @Override

@@ -1,17 +1,11 @@
 package io.github.edmm.plugins.multi.orchestration.camunda;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 import javax.inject.Named;
 
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
-import org.camunda.bpm.model.bpmn.instance.ServiceTask;
-import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperties;
-import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperty;
 
 @Named
 public class TriggerDelegate implements JavaDelegate {
@@ -23,6 +17,7 @@ public class TriggerDelegate implements JavaDelegate {
         String sourceComponent = null;
         String targetComponent = null;
 
+        /*
         System.out.println(delegateExecution.getVariable("variables"));
 
         ServiceTask serviceTask = (ServiceTask) delegateExecution.getBpmnModelElementInstance();
@@ -58,6 +53,10 @@ public class TriggerDelegate implements JavaDelegate {
         System.out.println(sourceComponent);
         System.out.println(targetComponent);
 
+         */
+
         camundaRestExchange.triggerTechnology(sourceComponent, targetComponent, variablesMap);
+
+        System.out.println("Trigger is finished!");
     }
 }

@@ -3,12 +3,16 @@ package io.github.edmm.plugins.multi.model;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OutputProperties {
+public class ComponentProperties {
 
     private String component;
     private HashMap<String, String> properties;
 
-    public OutputProperties(String component, HashMap<String, String> properties) {
+    public ComponentProperties() {
+
+    }
+
+    public ComponentProperties(String component, HashMap<String, String> properties) {
         this.component = component;
         this.properties = properties;
     }

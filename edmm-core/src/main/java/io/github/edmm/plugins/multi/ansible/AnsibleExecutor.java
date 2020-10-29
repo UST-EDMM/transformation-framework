@@ -15,7 +15,7 @@ import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.model.Property;
 import io.github.edmm.model.component.Compute;
 import io.github.edmm.plugins.DeploymentExecutor;
-import io.github.edmm.plugins.multi.model.OutputProperties;
+import io.github.edmm.plugins.multi.model.ComponentProperties;
 
 import com.google.gson.JsonObject;
 import lombok.var;
@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 public class AnsibleExecutor extends DeploymentExecutor {
     private static final Logger logger = LoggerFactory.getLogger(AnsibleExecutor.class);
-    private final List<OutputProperties> outputProperties = new ArrayList<>();
+    private final List<ComponentProperties> properties = new ArrayList<>();
 
 
     public AnsibleExecutor(ExecutionContext context, DeploymentTechnology deploymentTechnology) {
@@ -68,11 +68,11 @@ public class AnsibleExecutor extends DeploymentExecutor {
                     outputVariables.put(key, value.getValue());
                 });
 
-                OutputProperties outputPropertiess = new OutputProperties(
+                ComponentProperties propertiess = new ComponentProperties(
                     component.getName(),
                     outputVariables
                 );
-                outputProperties.add(outputPropertiess);
+                properties.add(propertiess);
                 var json = convertPropsToJson(component.getProperties());
                 context.getFileAccess().write(component.getName() + "_requiredProps.json", json.toString());
             }
@@ -83,11 +83,11 @@ public class AnsibleExecutor extends DeploymentExecutor {
                     outputVariables.put(key, value.getValue());
                 });
 
-                OutputProperties outputPropertiess = new OutputProperties(
+                ComponentProperties propertiess = new ComponentProperties(
                     compute.getName(),
                     outputVariables
                 );
-                outputProperties.add(outputPropertiess);
+                properties.add(propertiess);
                 context.getFileAccess().write(compute.getName() + "_host.json", json.toString());
 
             }
@@ -97,27 +97,14 @@ public class AnsibleExecutor extends DeploymentExecutor {
             Process apply = pb.start();
             apply.waitFor();
 
-            test();
-
-            //CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
-            //camundaRestExchange.completeTask(lastComponent, outputVariables);
-
         } catch (IOException | InterruptedException e) {
             logger.error(e.toString());
         }
     }
 
-    public List<OutputProperties> executeWithOutputProperty() {
+    public List<ComponentProperties> executeWithOutputProperty() {
         deploy();
-        return outputProperties;
-    }
-
-    public void test() {
-        System.out.println("LAST COMPONENT");
-        outputProperties.forEach(x -> {
-            System.out.println(x.getComponent());
-            System.out.println(x.getProperties());
-        });
+        return properties;
     }
 
     @Override
