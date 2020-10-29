@@ -3,6 +3,8 @@ package io.github.edmm.plugins.multi.kubernetes;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +17,7 @@ import io.github.edmm.core.transformation.TransformationException;
 import io.github.edmm.model.Property;
 import io.github.edmm.model.component.RootComponent;
 import io.github.edmm.plugins.DeploymentExecutor;
+import io.github.edmm.plugins.multi.model.OutputProperties;
 import io.github.edmm.utils.Consts;
 
 import io.kubernetes.client.ApiClient;
@@ -36,6 +39,7 @@ import static io.github.edmm.plugins.kubernetes.KubernetesPlugin.STACKS_ENTRY;
 public class KubernetesExecutorMulti extends DeploymentExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesExecutorMulti.class);
+    private final List<OutputProperties> outputProperties = new ArrayList<>();
     private final List<String> stacks;
 
     public KubernetesExecutorMulti(ExecutionContext context, DeploymentTechnology deploymentTechnology) {
@@ -128,7 +132,13 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
 
     @Override
     public void execute() throws Exception {
+        deploy();
+    }
+
+    public void deploy() {
+        HashMap<String, String> outputVariables = new HashMap<>();
         File fileAccess = this.context.getDirectory();
+
         for (String stackName : this.stacks) {
             File compDir = new File(fileAccess, stackName);
             if (!compDir.exists()) {
@@ -149,8 +159,8 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
                 init.waitFor();
                 pb.command("docker", "tag", stackName + ":latest", registry + stackName);
                 pb.start().waitFor();
-                pb.command("docker", "push", registry + stackName);
-                pb.start().waitFor();
+                //pb.command("docker", "push", registry + stackName);
+                //pb.start().waitFor();
             } catch (IOException | InterruptedException e) {
                 logger.error("could not deploy comp: {}", stackName);
                 e.printStackTrace();
@@ -165,11 +175,12 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
 
                 // contains the runtime properties
                 Optional<RootComponent> comp = context.getTransformation().getModel().getComponent(stackName);
+
                 if (!comp.isPresent()) {
                     throw new ExecutionException("could not find stack " + stackName);
                 }
                 var resolvedVars = TopologyGraphHelper.resolvePropertyReferences(
-                        context.getTransformation().getTopologyGraph(), comp.get(), comp.get().getProperties());
+                    context.getTransformation().getTopologyGraph(), comp.get(), comp.get().getProperties());
                 deployConfigMap(stackName, resolvedVars, compDir, api);
 
                 // deploy everything
@@ -181,11 +192,20 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
 
                 // read output
                 for (var port : service.get().getSpec().getPorts()) {
+                    outputVariables.put("nodeport", port.getNodePort().toString());
                     logger.info("the ’public’ nodeport is: {}", port.getNodePort().toString());
 
                 }
                 logger.info("the clusterIP is: {}", service.get().getSpec().getClusterIP());
+                outputVariables.put("hostname", service.get().getSpec().getClusterIP());
                 comp.get().addProperty("hostname", service.get().getSpec().getClusterIP());
+
+                OutputProperties outputPropertiess = new OutputProperties(
+                    stackName,
+                    outputVariables
+                );
+
+                outputProperties.add(outputPropertiess);
 
             } catch (IOException e) {
                 logger.error("could not deploy comp: {}", stackName);
@@ -200,6 +220,20 @@ public class KubernetesExecutorMulti extends DeploymentExecutor {
                 e.printStackTrace();
             }
         }
+
+        outputProperties.forEach(x -> {
+            System.out.println(x.getComponent());
+            System.out.println(x.getProperties());
+        });
+
+        String lastComponentOfStack = this.stacks.get(this.stacks.size() - 1);
+        //CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
+        //camundaRestExchange.completeTask(lastComponentOfStack, outputVariables);
+    }
+
+    public List<OutputProperties> executeWithOutputProperty() {
+        deploy();
+        return outputProperties;
     }
 
     @Override

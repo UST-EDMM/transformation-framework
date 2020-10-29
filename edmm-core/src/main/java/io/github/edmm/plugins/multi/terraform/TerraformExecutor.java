@@ -2,6 +2,7 @@ package io.github.edmm.plugins.multi.terraform;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.model.Artifact;
 import io.github.edmm.model.Property;
 import io.github.edmm.plugins.DeploymentExecutor;
+import io.github.edmm.plugins.multi.model.OutputProperties;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -24,6 +26,7 @@ import org.slf4j.LoggerFactory;
 public class TerraformExecutor extends DeploymentExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(TerraformExecutor.class);
+    private final List<OutputProperties> outputProperties = new ArrayList<>();
 
     public TerraformExecutor(ExecutionContext context, DeploymentTechnology deploymentTechnology) {
         super(context, deploymentTechnology);
@@ -31,10 +34,15 @@ public class TerraformExecutor extends DeploymentExecutor {
 
     @Override
     public void execute() throws Exception {
+        deploy();
+    }
+
+    public void deploy() throws Exception {
         Gson gson = new Gson();
         ProcessBuilder pb = new ProcessBuilder();
         pb.inheritIO();
         pb.directory(context.getDirectory());
+        String lastComponent = null;
 
         for (var component : context.getTransformation().getGroup().groupComponents) {
             List<Artifact> providerInfo = component.getArtifacts().stream().filter(a -> a.getName().equals("provider"))
@@ -55,6 +63,11 @@ public class TerraformExecutor extends DeploymentExecutor {
                 env.put("TF_VAR_" + key, obj.get(key));
             }
 
+            // Upgrades terraform to 0.13 for openstack
+            pb.command("terraform", "0.13upgrade", "-yes", ".");
+            Process upgrade = pb.start();
+            upgrade.waitFor();
+
             // deploy
             pb.command("terraform", "init");
             Process init = pb.start();
@@ -72,6 +85,7 @@ public class TerraformExecutor extends DeploymentExecutor {
             }.getType());
 
             Map<String, Property> properties = component.getProperties();
+            HashMap<String, String> outputVariables = new HashMap<>();
 
             // set all properties
             // object is a map
@@ -84,8 +98,27 @@ public class TerraformExecutor extends DeploymentExecutor {
                     var prop = properties.get(computed_prop.getKey());
                     prop.setValue(computed_prop.getValue());
                 }
+                outputVariables.put(computed_prop.getKey(), computed_prop.getValue());
+                OutputProperties outputPropertiess = new OutputProperties(
+                    component.getName(),
+                    outputVariables
+                );
+                outputProperties.add(outputPropertiess);
             }
+            lastComponent = component.getNormalizedName();
         }
+
+        System.out.println(outputProperties);
+        System.out.println(outputProperties.get(0).getComponent());
+        System.out.println(outputProperties.get(0).getProperties());
+
+        //CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
+        //camundaRestExchange.completeTask(lastComponent, outputVariables);
+    }
+
+    public List<OutputProperties> executeWithOutputProperty() throws Exception {
+        deploy();
+        return outputProperties;
     }
 
     @Override

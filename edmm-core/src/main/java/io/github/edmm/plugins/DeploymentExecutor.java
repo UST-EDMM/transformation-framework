@@ -2,10 +2,12 @@ package io.github.edmm.plugins;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import io.github.edmm.core.DeploymentTechnology;
 import io.github.edmm.core.execution.ExecutionContext;
+import io.github.edmm.plugins.multi.model.OutputProperties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,8 @@ public abstract class DeploymentExecutor {
     }
 
     public abstract void execute() throws Exception;
+
+    public abstract List<OutputProperties> executeWithOutputProperty() throws Exception;
 
     public abstract void destroy() throws Exception;
 

@@ -83,7 +83,6 @@ public final class TransformationContext {
     public static TransformationContext of(File directory) {
 
         File file = new File(directory, CONTEXT_FILENAME);
-        System.out.println(file.toString());
         if (!file.isFile() || !directory.canRead()) {
             throw new IllegalStateException(String.format("Cannot read context from file '%s'", file));
         }

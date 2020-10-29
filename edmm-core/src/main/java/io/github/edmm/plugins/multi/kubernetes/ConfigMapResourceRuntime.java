@@ -28,7 +28,8 @@ public final class ConfigMapResourceRuntime implements KubernetesResource {
     @Override
     public void build() {
 
-        var configMapBuilder = new V1ConfigMapBuilder().withApiVersion("v1").withNewMetadata().withName(getName())
+        var configMapBuilder = new V1ConfigMapBuilder().withApiVersion("v1").withKind("ConfigMap").
+            withNewMetadata().withName(getName())
                 .withNamespace(namespace).endMetadata();
 
         for (var prop : props.entrySet()) {

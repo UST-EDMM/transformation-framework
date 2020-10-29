@@ -9,6 +9,7 @@ import java.util.concurrent.TimeoutException;
 import io.github.edmm.core.DeploymentTechnology;
 import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.plugins.DeploymentExecutor;
+import io.github.edmm.plugins.multi.model.OutputProperties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,11 @@ public class TerraformExecutor extends DeploymentExecutor {
     public void execute() throws InterruptedException, IOException, TimeoutException {
         executeProcess(TERRAFORM_CMD, TERRAFORM_INIT_CMD);
         executeProcess(resolveInputParams(TERRAFORM_CMD, TERRAFORM_DEPLOY_CMD, AUTO_APPROVE_OPTION));
+    }
+
+    @Override
+    public List<OutputProperties> executeWithOutputProperty() throws Exception {
+        return null;
     }
 
     public void destroy() throws InterruptedException, IOException, TimeoutException {

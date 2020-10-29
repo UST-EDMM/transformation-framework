@@ -2,7 +2,10 @@ package io.github.edmm.plugins.multi.ansible;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,6 +15,7 @@ import io.github.edmm.core.execution.ExecutionContext;
 import io.github.edmm.model.Property;
 import io.github.edmm.model.component.Compute;
 import io.github.edmm.plugins.DeploymentExecutor;
+import io.github.edmm.plugins.multi.model.OutputProperties;
 
 import com.google.gson.JsonObject;
 import lombok.var;
@@ -20,6 +24,8 @@ import org.slf4j.LoggerFactory;
 
 public class AnsibleExecutor extends DeploymentExecutor {
     private static final Logger logger = LoggerFactory.getLogger(AnsibleExecutor.class);
+    private final List<OutputProperties> outputProperties = new ArrayList<>();
+
 
     public AnsibleExecutor(ExecutionContext context, DeploymentTechnology deploymentTechnology) {
         super(context, deploymentTechnology);
@@ -36,6 +42,10 @@ public class AnsibleExecutor extends DeploymentExecutor {
 
     @Override
     public void execute() throws Exception {
+        deploy();
+    }
+
+    public void deploy() {
         File directory = context.getDirectory();
         ProcessBuilder pb = new ProcessBuilder();
         pb.inheritIO();
@@ -45,14 +55,39 @@ public class AnsibleExecutor extends DeploymentExecutor {
         Set<Compute> hosts = new HashSet<>();
         try {
             for (var component : context.getTransformation().getGroup().groupComponents) {
+                HashMap<String, String> outputVariables = new HashMap<>();
                 Compute host = TopologyGraphHelper.resolveHostingComputeComponent(context.getTransformation().getTopologyGraph(), component)
                     .orElseThrow(() -> new IllegalArgumentException("can't find the hosting component"));
                 hosts.add(host);
+
+                component.getProperties().forEach((key, value) -> {
+                    // Sets hostname, since it is not updated in the properties
+                    if (key.equals("hostname")) {
+                        value.setValue(host.getProperty("hostname").get().getValue());
+                    }
+                    outputVariables.put(key, value.getValue());
+                });
+
+                OutputProperties outputPropertiess = new OutputProperties(
+                    component.getName(),
+                    outputVariables
+                );
+                outputProperties.add(outputPropertiess);
                 var json = convertPropsToJson(component.getProperties());
                 context.getFileAccess().write(component.getName() + "_requiredProps.json", json.toString());
             }
             for (var compute : hosts) {
+                HashMap<String, String> outputVariables = new HashMap<>();
                 var json = convertPropsToJson(compute.getProperties());
+                compute.getProperties().forEach((key, value) -> {
+                    outputVariables.put(key, value.getValue());
+                });
+
+                OutputProperties outputPropertiess = new OutputProperties(
+                    compute.getName(),
+                    outputVariables
+                );
+                outputProperties.add(outputPropertiess);
                 context.getFileAccess().write(compute.getName() + "_host.json", json.toString());
 
             }
@@ -61,14 +96,32 @@ public class AnsibleExecutor extends DeploymentExecutor {
 
             Process apply = pb.start();
             apply.waitFor();
+
+            test();
+
+            //CamundaRestExchange camundaRestExchange = new CamundaRestExchange();
+            //camundaRestExchange.completeTask(lastComponent, outputVariables);
+
         } catch (IOException | InterruptedException e) {
             logger.error(e.toString());
         }
     }
 
+    public List<OutputProperties> executeWithOutputProperty() {
+        deploy();
+        return outputProperties;
+    }
+
+    public void test() {
+        System.out.println("LAST COMPONENT");
+        outputProperties.forEach(x -> {
+            System.out.println(x.getComponent());
+            System.out.println(x.getProperties());
+        });
+    }
+
     @Override
     public void destroy() throws Exception {
-
     }
 }
 
