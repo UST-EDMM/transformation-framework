@@ -191,6 +191,16 @@ public class MultiLifecycle extends AbstractLifecycle {
         for (AbstractLifecycle groupLifecycle : groupLifecycles) {
             for (var component : groupLifecycle.getTransformationContext().getGroup().groupComponents) {
 
+                component.getProperties().forEach((x,y) -> {
+                    if (y.getValue() != null) {
+                        if (y.getValue().startsWith("$")) {
+                            System.out.println("$ Test");
+                            System.out.println(component.getName());
+                            System.out.println(component.getProperty(x).get().getName());
+                        }
+                    }
+                });
+
                 // Since it does not matter, which component is chosen from the Arraylist
                 // The component itself knows which technology and other components are part of it
                 if (component.getName().equals(components.get(0))) {
@@ -267,9 +277,11 @@ public class MultiLifecycle extends AbstractLifecycle {
         Map<String, Property> properties = component.getProperties();
 
         variables.forEach((variablesKey, variablesValue) -> {
-            if (component.getProperty(variablesKey).isPresent() &&
-                (component.getProperty(variablesKey).get().getValue() == null ||
-                component.getProperty(variablesKey).get().getValue().isEmpty())) {
+            var componentKey = component.getProperty(variablesKey);
+
+            if (componentKey.isPresent() && (componentKey.get().getValue() == null ||
+                componentKey.get().getValue().isEmpty()) ||
+                componentKey.get().getValue().startsWith("$")) {
 
                 Property property = properties.get(variablesKey);
                 property.setValue(variablesValue);

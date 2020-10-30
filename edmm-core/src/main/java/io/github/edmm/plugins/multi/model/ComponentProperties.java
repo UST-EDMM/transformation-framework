@@ -1,9 +1,10 @@
 package io.github.edmm.plugins.multi.model;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ComponentProperties {
+public class ComponentProperties implements Serializable {
 
     private String component;
     private HashMap<String, String> properties;
