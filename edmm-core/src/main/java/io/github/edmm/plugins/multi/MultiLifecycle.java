@@ -124,7 +124,19 @@ public class MultiLifecycle extends AbstractLifecycle {
                 step.components
                     .add(new ComponentResources(comp.getName(), propLists.getFirst(), propLists.getSecond()));
 
-                System.out.println(comp.getName());
+                //System.out.println(comp.getName());
+                /*
+                comp.getRelations().forEach(x -> {
+                    if (comp.getName().equals("pet_clinic")) {
+                        if (x instanceof ConnectsTo) {
+                            System.out.println("Instance");
+                            System.out.println(x);
+                            System.out.println(x.getTarget());
+                            System.out.println("Instance end");
+                        }
+                    }
+                });
+                 */
 
             }
 

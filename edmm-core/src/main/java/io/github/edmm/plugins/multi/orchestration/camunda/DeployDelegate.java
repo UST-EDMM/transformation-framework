@@ -40,6 +40,7 @@ public class DeployDelegate implements JavaDelegate {
     public void deploy(DelegateExecution delegateExecution) {
 
         System.out.println("1!");
+        delegateExecution.setVariable("modelId", "123");
 
         String modelId = (String) delegateExecution.getVariable("modelId");
         String correlationId = (String) delegateExecution.getVariable("correlationId");
@@ -51,7 +52,7 @@ public class DeployDelegate implements JavaDelegate {
         DeployRequest deployRequest = new DeployRequest(
             modelId,
             correlationId == null ? null : UUID.fromString(correlationId),
-            retrieveDeployComponents(delegateExecution),
+            retrieveBPMNProperties(delegateExecution),
             new ArrayList<>(Arrays.asList(inputsList))
         );
 
@@ -89,7 +90,12 @@ public class DeployDelegate implements JavaDelegate {
 
     }
 
-    public ArrayList<String> retrieveDeployComponents(DelegateExecution delegateExecution) {
+    /**
+     * TODO: Change to Helper Method
+     * @param delegateExecution
+     * @return
+     */
+    public ArrayList<String> retrieveBPMNProperties(DelegateExecution delegateExecution) {
         ArrayList<String> deployComponents = new ArrayList<>();
         ServiceTask serviceTask = (ServiceTask) delegateExecution.getBpmnModelElementInstance();
         CamundaProperties camProperties = serviceTask.getExtensionElements().getElementsQuery().filterByType(CamundaProperties.class).singleResult();
