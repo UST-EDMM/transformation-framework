@@ -15,9 +15,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
-import org.camunda.bpm.model.bpmn.instance.ServiceTask;
-import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperties;
-import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -27,54 +26,78 @@ import org.springframework.web.client.RestTemplate;
 @Named
 public class DeployDelegate implements JavaDelegate {
 
+    private static final Logger logger = LoggerFactory.getLogger(SendDelegate.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void execute(DelegateExecution delegateExecution) throws Exception {
-
         deploy(delegateExecution);
-        System.out.println("Trigger is finished!");
     }
 
     @SuppressWarnings("checkstyle:EmptyLineSeparator")
     public void deploy(DelegateExecution delegateExecution) {
 
-        System.out.println("1!");
-        delegateExecution.setVariable("modelId", "123");
-
+        /* Sets up the parameters for the DeployRequest that has to be sent to EDMM Web
+         * Sample shown below
+         * {
+         *     "modelId": "123",
+         *     "correlationId": "eb0fbb4b-d564-4aa8-a7e3-cec5aba9414f",
+         *     "components": [
+         *         "pet_clinic"
+         *     ],
+         *     "inputs": [
+         *         {
+         *             "component": "db",
+         *             "properties": {
+         *                 "hostname": "123.123.123
+         *             }
+         *         }
+         *     ]
+         * }
+         */
+        delegateExecution.setVariable("modelId", delegateExecution.getTenantId());
         String modelId = (String) delegateExecution.getVariable("modelId");
         String correlationId = (String) delegateExecution.getVariable("correlationId");
-        ComponentProperties[] inputsList = objectMapper.convertValue(
-            delegateExecution.getVariable("properties"), ComponentProperties[].class);
+        ComponentProperties[] inputsList = {};
 
-        System.out.println("2!");
+        if (delegateExecution.getVariable("properties") != null) {
+            inputsList = objectMapper.convertValue(
+                delegateExecution.getVariable("properties"), ComponentProperties[].class);
+        }
 
+        // Sets DeployRequest parameters
         DeployRequest deployRequest = new DeployRequest(
             modelId,
             correlationId == null ? null : UUID.fromString(correlationId),
-            retrieveBPMNProperties(delegateExecution),
+            DelegateHelper.retrieveBPMNProperties("component", delegateExecution),
             new ArrayList<>(Arrays.asList(inputsList))
         );
 
         startRESTCall(deployRequest, delegateExecution);
-
     }
 
     public void startRESTCall(DeployRequest deployRequest, DelegateExecution delegateExecution) {
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        String participant = retrieveBPMNProperty("participant", delegateExecution) + "orchestration/deploy";
+        String participant = DelegateHelper.retrieveBPMNProperty("participant", delegateExecution) + "orchestration/deploy";
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         HttpEntity<DeployRequest> entity = new HttpEntity<>(deployRequest, headers);
 
+        logger.info("Starting REST call with following JSON body:");
+        System.out.println(DelegateHelper.parseObjectToJSON(deployRequest));
         String result = restTemplate.exchange(participant, HttpMethod.POST, entity, String.class).getBody();
 
         try {
             delegateExecution.removeVariables();
             DeployResult deployResult = objectMapper.readValue(result, DeployResult.class);
+            logger.info("Reading out deployed result parameters");
+            System.out.println(DelegateHelper.parseObjectToJSON(deployResult));
+
+            // Sets returned deployed result parameters
             setCamundaProperties(deployResult, delegateExecution);
         } catch (JsonProcessingException e) {
+            logger.info("Reading results failed");
             e.printStackTrace();
         }
     }
@@ -83,41 +106,6 @@ public class DeployDelegate implements JavaDelegate {
         delegateExecution.setVariable("modelId", deployResult.getModelId());
         delegateExecution.setVariable("correlationId", deployResult.getCorrelationId().toString());
         delegateExecution.setVariable("properties", deployResult.getOutput());
-
-        System.out.println(delegateExecution.getVariable("modelId"));
-        System.out.println(delegateExecution.getVariable("correlationId"));
-        System.out.println(delegateExecution.getVariable("properties"));
-
-    }
-
-    /**
-     * TODO: Change to Helper Method
-     * @param delegateExecution
-     * @return
-     */
-    public ArrayList<String> retrieveBPMNProperties(DelegateExecution delegateExecution) {
-        ArrayList<String> deployComponents = new ArrayList<>();
-        ServiceTask serviceTask = (ServiceTask) delegateExecution.getBpmnModelElementInstance();
-        CamundaProperties camProperties = serviceTask.getExtensionElements().getElementsQuery().filterByType(CamundaProperties.class).singleResult();
-
-        for (CamundaProperty camundaProperty : camProperties.getCamundaProperties()) {
-            if (camundaProperty.getCamundaName().equals("component")) {
-                deployComponents.add(camundaProperty.getCamundaValue());
-            }
-        }
-        return deployComponents;
-    }
-
-    public String retrieveBPMNProperty(String property, DelegateExecution delegateExecution) {
-        String propertyValue = null;
-        ServiceTask serviceTask = (ServiceTask) delegateExecution.getBpmnModelElementInstance();
-        CamundaProperties camProperties = serviceTask.getExtensionElements().getElementsQuery().filterByType(CamundaProperties.class).singleResult();
-
-        for (CamundaProperty camundaProperty : camProperties.getCamundaProperties()) {
-            if (camundaProperty.getCamundaName().equals(property)) {
-                propertyValue = camundaProperty.getCamundaValue();
-            }
-        }
-        return propertyValue;
+        logger.info("New Camunda process variables set");
     }
 }
