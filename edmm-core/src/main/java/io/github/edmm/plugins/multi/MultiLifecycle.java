@@ -63,12 +63,6 @@ public class MultiLifecycle extends AbstractLifecycle {
 
     public void putContext() {
         store.put(context.getId(), context);
-        System.out.println(context.getId());
-    }
-
-    public void getContext() {
-        System.out.println(context.getId());
-        System.out.println(groupLifecycles);
     }
 
     public void preprareGroups(List<Group> sortedGroups) {
@@ -112,8 +106,6 @@ public class MultiLifecycle extends AbstractLifecycle {
         for (int i = 0; i < sortedGroups.size(); i++) {
             var group = sortedGroups.get(i);
 
-            System.out.println(group.groupComponents.stream().findFirst());
-
             var step = new PlanStep(group.getTechnology());
             TopologicalOrderIterator<RootComponent, RootRelation> subIterator = new TopologicalOrderIterator<>(
                 sortedGroups.get(i).subGraph);
@@ -123,21 +115,6 @@ public class MultiLifecycle extends AbstractLifecycle {
                 var propLists = TransformationHelper.collectRuntimeEnvInputOutput(context.getTopologyGraph(), comp);
                 step.components
                     .add(new ComponentResources(comp.getName(), propLists.getFirst(), propLists.getSecond()));
-
-                //System.out.println(comp.getName());
-                /*
-                comp.getRelations().forEach(x -> {
-                    if (comp.getName().equals("pet_clinic")) {
-                        if (x instanceof ConnectsTo) {
-                            System.out.println("Instance");
-                            System.out.println(x);
-                            System.out.println(x.getTarget());
-                            System.out.println("Instance end");
-                        }
-                    }
-                });
-                 */
-
             }
 
             plan.steps.add(step);
@@ -159,6 +136,8 @@ public class MultiLifecycle extends AbstractLifecycle {
         logger.info("Begin transformation to Multi...");
 
         store.put(context.getId(), context);
+
+        System.out.println("TECHNOLOG MAPPING");
 
         // new Groupprovisioning
         List<Group> sortedGroups = GroupProvisioning.determineProvisiongingOrder(context.getModel());
@@ -202,16 +181,6 @@ public class MultiLifecycle extends AbstractLifecycle {
         // Looks up the lifecycle of the target component and assigns them to targetLifecycle
         for (AbstractLifecycle groupLifecycle : groupLifecycles) {
             for (var component : groupLifecycle.getTransformationContext().getGroup().groupComponents) {
-
-                component.getProperties().forEach((x,y) -> {
-                    if (y.getValue() != null) {
-                        if (y.getValue().startsWith("$")) {
-                            System.out.println("$ Test");
-                            System.out.println(component.getName());
-                            System.out.println(component.getProperty(x).get().getName());
-                        }
-                    }
-                });
 
                 // Since it does not matter, which component is chosen from the Arraylist
                 // The component itself knows which technology and other components are part of it

@@ -19,6 +19,7 @@ import io.github.edmm.core.parser.support.GraphNormalizer;
 
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.var;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.SimpleDirectedGraph;
 import org.yaml.snakeyaml.DumperOptions;
@@ -35,10 +36,14 @@ import org.yaml.snakeyaml.nodes.SequenceNode;
 public class EntityGraph extends SimpleDirectedGraph<Entity, EntityGraph.Edge> {
 
     public static final EntityId ROOT = new EntityId("0");
+    public static final EntityId MULTI_ID = ROOT.extend("multi_id");
+    public static final EntityId OWNER = ROOT.extend("owner");
     public static final EntityId COMPONENTS = ROOT.extend("components");
     public static final EntityId COMPONENT_TYPES = ROOT.extend("component_types");
     public static final EntityId RELATION_TYPES = ROOT.extend("relation_types");
     public static final EntityId ORCHESTRATION_TECHNOLOGY = ROOT.extend("orchestration_technology");
+    public static final EntityId PARTICIPANTS = ROOT.extend("participants");
+
 
     public EntityGraph() {
         // the edge supplier isn't needed if we use always the function
@@ -62,6 +67,53 @@ public class EntityGraph extends SimpleDirectedGraph<Entity, EntityGraph.Edge> {
 
     public Optional<Entity> getOrchestrationTechnologyEntity() {
         return GraphHelper.findMappingEntity(this, ORCHESTRATION_TECHNOLOGY.getName(), ROOT);
+    }
+
+    public Optional<Entity> getParticipantsEntity() {
+        return GraphHelper.findMappingEntity(this, PARTICIPANTS.getName(), ROOT);
+    }
+
+    public String getParticipantEndpoint(String participant) {
+
+        for (var p : getParticipantsEntity().get().getChildren()) {
+            if (p.getName().equals(participant)) {
+                for (var partner : p.getChildren()) {
+                    if (partner.getName().equals("endpoint")) {
+                        ScalarEntity scalarEntity = (ScalarEntity) partner;
+                         return scalarEntity.getValue();
+                    }
+                }
+            }
+        }
+        throw new RuntimeException("No participant with endpoint available");
+    }
+
+    public String getParticipantFromComponentName(String componentName) {
+
+        for (var p : getParticipantsEntity().get().getChildren()) {
+            for (var partner : p.getChildren()) {
+                if (partner.getName().equals("components")) {
+                    SequenceEntity sequenceEntity = (SequenceEntity) partner;
+                    for (var comp : sequenceEntity.getChildren()) {
+                        ScalarEntity scalarEntity = (ScalarEntity) comp;
+                        if (scalarEntity.getValue().equals(componentName)) {
+                            return p.getName();
+                        }
+                    }
+                }
+            }
+        }
+        throw new RuntimeException("No participant with component name available");
+    }
+
+    public String getMultiId() {
+        ScalarEntity scalarEntity = (ScalarEntity) getEntity(MULTI_ID).get();
+        return scalarEntity.getValue();
+    }
+
+    public String getOwner() {
+        ScalarEntity scalarEntity = (ScalarEntity) getEntity(OWNER).get();
+        return scalarEntity.getValue();
     }
 
     public Optional<Entity> getEntity(List<String> path) {

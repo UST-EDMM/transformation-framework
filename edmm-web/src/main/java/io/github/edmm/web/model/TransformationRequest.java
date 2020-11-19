@@ -19,6 +19,8 @@ public class TransformationRequest {
     @Schema(description = "The name of the transformation target", required = true)
     private String target;
 
+    private String multiId;
+
     @NotEmpty
     @Schema(description = "The EDMM input as Base64 encoded string", required = true)
     private String input;
