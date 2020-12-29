@@ -2,6 +2,7 @@ package io.github.edmm.model;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -123,6 +124,10 @@ public final class DeploymentModel {
 
     public String getParticipantFromComponentName(String componentName) {
         return graph.getParticipantFromComponentName(componentName);
+    }
+
+    public HashMap<String, String> getParticipants() {
+        return graph.getParticipants();
     }
 
     public String getOwner() {

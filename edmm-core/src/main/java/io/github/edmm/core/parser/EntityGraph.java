@@ -88,6 +88,21 @@ public class EntityGraph extends SimpleDirectedGraph<Entity, EntityGraph.Edge> {
         throw new RuntimeException("No participant with endpoint available");
     }
 
+    public HashMap<String, String> getParticipants() {
+
+        HashMap<String, String> participants = new HashMap<>();
+
+        for (var p : getParticipantsEntity().get().getChildren()) {
+            for (var partner : p.getChildren()) {
+                if (partner.getName().equals("endpoint")) {
+                    ScalarEntity scalarEntity = (ScalarEntity) partner;
+                        participants.put(p.getName(), scalarEntity.getValue());
+                }
+            }
+        }
+        return participants;
+    }
+
     public String getParticipantFromComponentName(String componentName) {
 
         for (var p : getParticipantsEntity().get().getChildren()) {

@@ -42,10 +42,10 @@ public class OrchestrationHandler {
             DeploymentModel deploymentModel = DeploymentModel.of(input);
 
             Path sourceDirectory = Paths.get(repositoryPath);
-            Path newTargetDirectory = Paths.get(repositoryPath + "/multi-" + model.getMultiId());
+            Path newTargetDirectory = Paths.get(repositoryPath + "/multi-" + deploymentModel.getMultiId());
 
             context = transformationService.createContext(deploymentModel, model.getTarget(), sourceDirectory.toFile(), newTargetDirectory.toFile());
-            context.setId(model.getMultiId());
+            context.setId(deploymentModel.getMultiId());
 
             MultiLifecycle multiLifecycle = new MultiLifecycle(context);
             multiLifecycle.transform();

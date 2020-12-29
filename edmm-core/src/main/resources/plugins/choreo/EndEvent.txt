@@ -1,0 +1,10 @@
+  <bpmn:endEvent id="EndEvent">
+    <#list endpoint_flows as flow>
+    <bpmn:incoming>${flow}</bpmn:incoming>
+    </#list>
+  </bpmn:endEvent>
+  </bpmn:process>
+
+<bpmn:message id="Message_0clqbw6" name="ubuntu_db" />
+
+</bpmn:definitions>

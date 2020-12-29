@@ -1,0 +1,75 @@
+
+<#if deployTasks?has_content>
+<#list deployTasks as dt>
+<bpmn:serviceTask id="ID_${dt.step}" name="DEPLOY ${dt.tech}" camunda:delegateExpression="${r"${deployDelegate}"}">
+  <bpmn:extensionElements>
+    <camunda:properties>
+      <#list owner as o>
+      <camunda:property name="participant" value="${o}" />
+      </#list>
+      <#list dt.components as component>
+      <camunda:property name="component" value="${component.name}" />
+      </#list>
+    </camunda:properties>
+  </bpmn:extensionElements>
+  <bpmn:incoming>Flow_${dt.step}</bpmn:incoming>
+  <bpmn:outgoing>Flow_${dt.step + 1}</bpmn:outgoing>
+</bpmn:serviceTask>
+</#list>
+<#list deployTasks as dt>
+<#if dt.step == 0>
+<bpmn:sequenceFlow id="Flow_${dt.step}" sourceRef="Gateway_2" targetRef="ID_${dt.step}" />
+<#else>
+<bpmn:sequenceFlow id="Flow_${dt.step}" sourceRef="ID_${dt.step - 1}" targetRef="ID_${dt.step}" />
+</#if>
+</#list>
+</#if>
+
+<#if sendTasks?has_content>
+<#list sendTasks as st>
+<bpmn:serviceTask id="ID_${st.step}" name="SEND" camunda:delegateExpression="${r"${sendDelegate}"}">
+  <bpmn:extensionElements>
+    <camunda:properties>
+      <camunda:property name="participant" value="${st.participant}" />
+      <#list st.input as input>
+      <camunda:property name="input" value="${input}" />
+      </#list>
+      <camunda:property name="component" value="${st.component}" />
+    </camunda:properties>
+  </bpmn:extensionElements>
+  <bpmn:incoming>Flow_${st.step}</bpmn:incoming>
+  <bpmn:outgoing>Flow_${st.step + 1}</bpmn:outgoing>
+</bpmn:serviceTask>
+</#list>
+<#list sendTasks as st>
+<bpmn:sequenceFlow id="Flow_${st.step}" sourceRef="ID_${st.step - 1}" targetRef="ID_${st.step}" />
+</#list>
+</#if>
+
+<#if receiveTasks?has_content>
+<#list receiveTasks as rt>
+<bpmn:receiveTask id="ID_${rt.step}" name="Receive" messageRef="Message_${rt.step}">
+  <bpmn:incoming>Flow_${rt.step}</bpmn:incoming>
+  <bpmn:outgoing>Flow_${rt.step + 1}</bpmn:outgoing>
+</bpmn:receiveTask>
+</#list>
+<#list receiveTasks as rt>
+<#if rt.step == 0>
+<bpmn:sequenceFlow id="Flow_${rt.step}" sourceRef="Gateway_2" targetRef="ID_${rt.step}" />
+<#else>
+<bpmn:sequenceFlow id="Flow_${rt.step}" sourceRef="ID_${rt.step - 1}" targetRef="ID_${rt.step}" />
+</#if>
+</#list>
+</#if>
+
+</bpmn:process>
+
+<#if receiveTasks?has_content>
+<#list receiveTasks as rt>
+<bpmn:message id="Message_${rt.step}" name="${rt.component}" />
+</#list>
+</#if>
+
+</bpmn:definitions>
+
+

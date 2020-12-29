@@ -72,7 +72,7 @@ public class InitiateDelegate implements JavaDelegate {
                 System.out.println(DelegateHelper.parseObjectToJSON(initiateRequest));
                 restTemplate.exchange(participantURI, HttpMethod.POST, entity, String.class);
             } catch (ResourceAccessException e) {
-                System.out.println(e);
+                logger.info("CALLS are out");
             }
         });
     }

@@ -32,6 +32,8 @@ import io.github.edmm.plugins.multi.model.PlanStep;
 import io.github.edmm.plugins.multi.model_extensions.groupingGraph.Group;
 import io.github.edmm.plugins.multi.terraform.TerraformAreaLifecycle;
 import io.github.edmm.plugins.multi.terraform.TerraformExecutor;
+import io.github.edmm.plugins.multi.undefined_technology.UndefinedAreaLifeCycle;
+import io.github.edmm.plugins.multi.workflows.Templating;
 
 import com.google.gson.Gson;
 import lombok.var;
@@ -79,12 +81,15 @@ public class MultiLifecycle extends AbstractLifecycle {
             File targetDir = new File(context.getTargetDirectory(), subDir);
             TransformationContext groupContext = new TransformationContext(subDir, context.getModel(),
                 context.getDeploymentTechnology(), context.getSourceDirectory(), targetDir, group);
+
             if (group.getTechnology() == Technology.ANSIBLE) {
                 grpLifecycle = new AnsibleAreaLifecycle(groupContext);
             } else if (group.getTechnology() == Technology.TERRAFORM) {
                 grpLifecycle = new TerraformAreaLifecycle(groupContext);
             } else if (group.getTechnology() == Technology.KUBERNETES) {
                 grpLifecycle = new KubernetesAreaLifecycle(groupContext);
+            } else if (group.getTechnology() == Technology.UNDEFINED) {
+                grpLifecycle = new UndefinedAreaLifeCycle(groupContext);
             } else {
                 String error = String.format("could not find technology: %s for components %s", group.getTechnology(),
                     group);
@@ -95,14 +100,13 @@ public class MultiLifecycle extends AbstractLifecycle {
             var subgraph = new AsSubgraph<>(dependencyGraph, group.getGroupComponents());
 
             group.setSubGraph(subgraph);
-
         }
-
     }
 
     public void createWorkflow(List<Group> sortedGroups) {
 
         Plan plan = new Plan();
+
         for (int i = 0; i < sortedGroups.size(); i++) {
             var group = sortedGroups.get(i);
 
@@ -115,10 +119,20 @@ public class MultiLifecycle extends AbstractLifecycle {
                 var propLists = TransformationHelper.collectRuntimeEnvInputOutput(context.getTopologyGraph(), comp);
                 step.components
                     .add(new ComponentResources(comp.getName(), propLists.getFirst(), propLists.getSecond()));
+
             }
 
+            if (!step.tech.equals(Technology.UNDEFINED)) {
+                step.setParticipantEndpoint(context.getModel().getParticipantEndpoint(context.getModel().getOwner()));
+            } else {
+                step.setParticipantEndpoint(null);
+            }
+
+            step.setStep(i);
             plan.steps.add(step);
         }
+
+        createBPMN(plan);
 
         Writer writer = new StringWriter();
         context.getModel().getGraph().generateYamlOutput(writer);
@@ -126,6 +140,20 @@ public class MultiLifecycle extends AbstractLifecycle {
         try {
             context.getFileAccess().write("state.yaml", writer.toString());
             context.getFileAccess().write("execution.plan.json", plan.toJson());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void createBPMN(Plan plan) {
+
+        Templating templating = new Templating(context);
+        templating.createInitiate(context.getModel().getParticipants());
+        templating.createBPMNFromPlan(templating.createPlan(plan));
+
+        try {
+            templating.mergeFiles();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -137,8 +165,6 @@ public class MultiLifecycle extends AbstractLifecycle {
 
         store.put(context.getId(), context);
 
-        System.out.println("TECHNOLOG MAPPING");
-
         // new Groupprovisioning
         List<Group> sortedGroups = GroupProvisioning.determineProvisiongingOrder(context.getModel());
         preprareGroups(sortedGroups);
@@ -148,8 +174,8 @@ public class MultiLifecycle extends AbstractLifecycle {
             groupLifecycles.get(i).transform();
             groupLifecycles.get(i).cleanup();
         }
+
         createWorkflow(sortedGroups);
-        System.out.println(groupLifecycles);
         logger.info("Transformation to Multi successful");
 
         //execute();
@@ -257,8 +283,13 @@ public class MultiLifecycle extends AbstractLifecycle {
     public void updateVariables(RootComponent component, Map<String, String> variables) {
         Map<String, Property> properties = component.getProperties();
 
+        System.out.println(component.getProperties());
+
         variables.forEach((variablesKey, variablesValue) -> {
             var componentKey = component.getProperty(variablesKey);
+
+            System.out.println("COMPONENT KEYS");
+            System.out.println(componentKey.get().getValue());
 
             if (componentKey.isPresent() && (componentKey.get().getValue() == null ||
                 componentKey.get().getValue().isEmpty()) ||

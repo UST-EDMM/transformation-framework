@@ -18,7 +18,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 @Named
@@ -81,6 +83,7 @@ public class SendDelegate implements JavaDelegate {
         final String participant = "participant";
 
         RestTemplate restTemplate = new RestTemplate();
+        ((SimpleClientHttpRequestFactory)restTemplate.getRequestFactory()).setReadTimeout(2000);
         HttpHeaders headers = new HttpHeaders();
         String participantURI = DelegateHelper.retrieveBPMNProperty(participant, delegateExecution) + "engine-rest/message";
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
@@ -93,6 +96,9 @@ public class SendDelegate implements JavaDelegate {
             }
         } catch (HttpClientErrorException clientErrorException) {
             logger.info("SEND not possible, endpoint not available yet");
+        } catch (ResourceAccessException e) {
+            this.successfulStatusCode = true;
+            logger.info("CALLS are out");
         }
     }
 
@@ -123,7 +129,7 @@ public class SendDelegate implements JavaDelegate {
                     String finalFormattedInputProperty = formattedInputProperty;
                     componentProperties.getProperties().forEach((property, value) -> {
 
-                        if (finalFormattedInputProperty.equals(property)) {
+                        if (finalFormattedInputProperty.toLowerCase().equals(property.toLowerCase())) {
                             propertyValues.put(property, value);
                         }
                     });

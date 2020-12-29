@@ -5,13 +5,11 @@ import java.util.List;
 
 public class ComponentResources {
 
-    List<String> runtimePropsOutput;
+    private List<String> runtimePropsOutput;
     // maybe used later
-    List<String> runtimeInputParams;
+    private List<String> runtimeInputParams;
 
     private final String name;
-
-
 
     public ComponentResources(String name) {
         this.name = name;
@@ -30,4 +28,11 @@ public class ComponentResources {
         return name;
     }
 
+    public List<String> getRuntimePropsOutput() {
+        return runtimePropsOutput;
+    }
+
+    public List<String> getRuntimeInputParams() {
+        return runtimeInputParams;
+    }
 }

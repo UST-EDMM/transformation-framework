@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.2.0">
+  <bpmn:process id="workflow" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>InitiateFlow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_1" default="InitiateFlow_4">
+      <bpmn:incoming>InitiateFlow_1</bpmn:incoming>
+      <bpmn:outgoing>InitiateFlow_2</bpmn:outgoing>
+      <bpmn:outgoing>InitiateFlow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="InitiateFlow_1" sourceRef="StartEvent_1" targetRef="Gateway_1" />
+    <bpmn:sequenceFlow id="InitiateFlow_2" sourceRef="Gateway_1" targetRef="Initiate_1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${r"${initiator == true}"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="Gateway_2">
+      <bpmn:incoming>InitiateFlow_3</bpmn:incoming>
+      <bpmn:incoming>InitiateFlow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_0</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="InitiateFlow_3" sourceRef="Initiate_1" targetRef="Gateway_2" />
+    <bpmn:sequenceFlow id="InitiateFlow_4" sourceRef="Gateway_1" targetRef="Gateway_2" />
+    <bpmn:serviceTask id="Initiate_1" name="Initiate" camunda:delegateExpression="${r"${initiateDelegate}"}">
+      <bpmn:extensionElements>
+        <camunda:properties>
+	      <#list participants as p>
+          <camunda:property name="participant" value="${p}" />
+	      </#list>
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>InitiateFlow_2</bpmn:incoming>
+      <bpmn:outgoing>InitiateFlow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
