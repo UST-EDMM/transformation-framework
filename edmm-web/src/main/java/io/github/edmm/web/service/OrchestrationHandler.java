@@ -44,7 +44,8 @@ public class OrchestrationHandler {
             Path sourceDirectory = Paths.get(repositoryPath);
             Path newTargetDirectory = Paths.get(repositoryPath + "/multi-" + deploymentModel.getMultiId());
 
-            context = transformationService.createContext(deploymentModel, model.getTarget(), sourceDirectory.toFile(), newTargetDirectory.toFile());
+            context = transformationService.createContext(deploymentModel, model.getTarget(), sourceDirectory.toFile(),
+                newTargetDirectory.toFile());
             context.setId(deploymentModel.getMultiId());
 
             MultiLifecycle multiLifecycle = new MultiLifecycle(context);
@@ -62,8 +63,6 @@ public class OrchestrationHandler {
      * @param deployRequest Valid RequestBody
      */
     public DeployResult prepareExecution(DeployRequest deployRequest) {
-
-        System.out.println(deployRequest.getModelId());
 
         // Retrieves the saved transformation context
         MultiLifecycle multiLifecycle = new MultiLifecycle(deployRequest.getModelId());

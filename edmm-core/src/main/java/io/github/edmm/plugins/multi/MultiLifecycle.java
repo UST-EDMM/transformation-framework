@@ -149,8 +149,8 @@ public class MultiLifecycle extends AbstractLifecycle {
     public void createBPMN(Plan plan) {
 
         Templating templating = new Templating(context);
-        templating.createInitiate(context.getModel().getParticipants());
-        templating.createBPMNFromPlan(templating.createPlan(plan));
+        templating.createBPMNInitiateSequence(context.getModel().getParticipants());
+        templating.createBPMNFromExecutionPlanSequence(templating.createExecutionPlanSequence(plan));
 
         try {
             templating.mergeFiles();
@@ -196,15 +196,15 @@ public class MultiLifecycle extends AbstractLifecycle {
     }
 
     /**
-     * Updates the target component by the sent process variables and executes
-     * the specified technology of the target component
+     * Updates the component by the sent process variables and executes
+     * the specified technology of the component
      *
      */
     public List<ComponentProperties> deployComponents(ArrayList<String> components) {
 
         AbstractLifecycle targetLifecycle = null;
 
-        // Looks up the lifecycle of the target component and assigns them to targetLifecycle
+        // Looks up the lifecycle of the component and assigns them to targetLifecycle
         for (AbstractLifecycle groupLifecycle : groupLifecycles) {
             for (var component : groupLifecycle.getTransformationContext().getGroup().groupComponents) {
 
@@ -217,7 +217,7 @@ public class MultiLifecycle extends AbstractLifecycle {
             }
         }
 
-        // If targetLifecycle is available, the target component is queried and updated with the sent process variables
+        // If targetLifecycle is available, the component is queried and updated with the sent process variables
         if (targetLifecycle != null) {
             Technology technology = targetLifecycle.getTransformationContext().getGroup().getTechnology();
             return executeTechnology(targetLifecycle, technology);
@@ -256,14 +256,14 @@ public class MultiLifecycle extends AbstractLifecycle {
     }
 
     /**
-     * Updates the source component by the sent process properties
+     * Updates the component by the sent input process properties
      *
-     * @param component Source component that has to be updated
+     * @param component Component that has to be updated
      * @param properties Sent process properties by Camunda
      */
     public void populateInputProperties(String component, Map<String, String> properties) {
 
-        // Determine the source component and update the graph
+        // Determine the component and update the graph
         for (AbstractLifecycle groupLifecycle : groupLifecycles) {
             groupLifecycle.getTransformationContext().getGroup().groupComponents.forEach(lifecycleComponent -> {
 
@@ -283,13 +283,8 @@ public class MultiLifecycle extends AbstractLifecycle {
     public void updateVariables(RootComponent component, Map<String, String> variables) {
         Map<String, Property> properties = component.getProperties();
 
-        System.out.println(component.getProperties());
-
         variables.forEach((variablesKey, variablesValue) -> {
             var componentKey = component.getProperty(variablesKey);
-
-            System.out.println("COMPONENT KEYS");
-            System.out.println(componentKey.get().getValue());
 
             if (componentKey.isPresent() && (componentKey.get().getValue() == null ||
                 componentKey.get().getValue().isEmpty()) ||
@@ -372,5 +367,4 @@ public class MultiLifecycle extends AbstractLifecycle {
         }
         return TopologyGraphHelper.resolvePropertyReferences(context.getTopologyGraph(), component, computedProps);
     }
-
 }

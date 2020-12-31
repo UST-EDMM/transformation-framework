@@ -23,6 +23,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Camunda JavaDelegate implementation for the deployment of technologies via BPMN delegate expressions
+ */
 @Named
 public class DeployDelegate implements JavaDelegate {
 

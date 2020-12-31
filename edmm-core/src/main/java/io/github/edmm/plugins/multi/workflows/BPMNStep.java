@@ -8,7 +8,7 @@ import io.github.edmm.plugins.multi.model.ComponentResources;
 import lombok.Data;
 
 @Data
-public class BPMNSteps {
+public class BPMNStep {
 
     private int step;
     private Technology tech;

@@ -19,6 +19,9 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Camunda JavaDelegate implementation for initiate starting sequence via BPMN delegate expressions
+ */
 @Named
 public class InitiateDelegate implements JavaDelegate {
 

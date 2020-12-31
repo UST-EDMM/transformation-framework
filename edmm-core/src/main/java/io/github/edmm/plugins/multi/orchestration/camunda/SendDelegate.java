@@ -23,6 +23,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Camunda JavaDelegate implementation for send sequences via BPMN delegate expressions
+ */
 @Named
 public class SendDelegate implements JavaDelegate {
 
@@ -102,6 +105,14 @@ public class SendDelegate implements JavaDelegate {
         }
     }
 
+    /**
+     * Filters out properties for the send sequence, so that only properties are sent that are marked with
+     * ${property.component}, e.g. ${db.hostname}
+     *
+     * @param inputsList List of ComponentProperties
+     * @param delegateExecution
+     * @return
+     */
     public ArrayList<ComponentProperties> prepareInputProperties(ComponentProperties[] inputsList, DelegateExecution delegateExecution) {
 
         final String component = "component";

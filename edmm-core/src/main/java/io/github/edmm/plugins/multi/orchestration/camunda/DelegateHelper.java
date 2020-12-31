@@ -12,10 +12,21 @@ import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Helper Class for common Camunda JavaDelegate implementations.
+ */
 public class DelegateHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(DelegateHelper.class);
 
+    /**
+     * Retrieves all properties (<camunda:properties>) with the same property name from the BPMN file.
+     * This can be for instance "partcipant" with multiple host instances
+     *
+     * @param propertyName Property name
+     * @param delegateExecution Current DelegateExecution
+     * @return
+     */
     protected static ArrayList<String> retrieveBPMNProperties(String propertyName, DelegateExecution delegateExecution) {
         ArrayList<String> bpmnProperties = new ArrayList<>();
         ServiceTask serviceTask = (ServiceTask) delegateExecution.getBpmnModelElementInstance();
@@ -31,6 +42,13 @@ public class DelegateHelper {
         return bpmnProperties;
     }
 
+    /**
+     * Retrieves a specific BPMN property (<camunda:property>) from the BPMN file.
+     *
+     * @param property Property name
+     * @param delegateExecution Current DelegateExecution
+     * @return
+     */
     protected static String retrieveBPMNProperty(String property, DelegateExecution delegateExecution) {
         String propertyValue = null;
 
