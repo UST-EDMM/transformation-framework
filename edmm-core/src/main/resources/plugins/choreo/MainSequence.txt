@@ -25,6 +25,7 @@
 </#list>
 </#if>
 
+
 <#if sendTasks?has_content>
 <#list sendTasks as st>
 <bpmn:serviceTask id="ID_${st.step}" name="SEND" camunda:delegateExpression="${r"${sendDelegate}"}">
@@ -62,11 +63,126 @@
 </#list>
 </#if>
 
+
+<#if multiReceiveTasks?has_content>
+<#list multiReceiveTasks as mRT>
+
+<#if mRT[0].step == 0>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step}" sourceRef="Gateway_2" targetRef="ID_${mRT[0].step}" />
+<#else>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step}" sourceRef="ID_${mRT[0].step - 1}" targetRef="ID_${mRT[0].step}" />
+</#if>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step + mRT?size}" sourceRef="ID_${mRT[0].step + mRT?size}" targetRef="ID_${mRT[0].step + mRT?size + 1}" />
+
+<bpmn:parallelGateway id="ID_${mRT[0].step}">
+  <bpmn:incoming>Flow_${mRT[0].step}</bpmn:incoming>
+  <#list mRT as rT>
+  <bpmn:outgoing>FirstInnerFlow_${rT.step}</bpmn:outgoing>
+  </#list>
+</bpmn:parallelGateway>
+
+<bpmn:parallelGateway id="ID_${mRT[0].step + mRT?size}">
+  <#list mRT as rT>
+  <bpmn:incoming>SecondInnerFlow_${rT.step}</bpmn:incoming>
+  </#list>
+  <bpmn:outgoing>Flow_${mRT[0].step + mRT?size}</bpmn:outgoing>
+</bpmn:parallelGateway>
+
+<#list mRT as rT>
+<bpmn:sequenceFlow id="FirstInnerFlow_${rT.step}" sourceRef="ID_${mRT[0].step}" targetRef="Multi_Message_ID_${rT.step}" />
+<bpmn:receiveTask id="Multi_Message_ID_${rT.step}" name="Receive" messageRef="Message_${rT.step}">
+  <bpmn:incoming>FirstInnerFlow_${rT.step}</bpmn:incoming>
+  <bpmn:outgoing>SecondInnerFlow_${rT.step}</bpmn:outgoing>
+</bpmn:receiveTask>
+<bpmn:sequenceFlow id="SecondInnerFlow_${rT.step}" sourceRef="Multi_Message_ID_${rT.step}" targetRef="ID_${mRT[0].step + mRT?size}" />
+</#list>
+
+</#list>
+</#if>
+
+
+<#if multiSendTasks?has_content>
+<#list multiSendTasks as mRT>
+
+<#if mRT[0].step == 0>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step}" sourceRef="Gateway_2" targetRef="ID_${mRT[0].step}" />
+<#else>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step}" sourceRef="ID_${mRT[0].step - 1}" targetRef="ID_${mRT[0].step}" />
+</#if>
+
+<#if endEvent?has_content>
+<#list endEvent as eE>
+<#if eE.step == (mRT[0].step - 1)>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step + mRT?size}" sourceRef="ID_${mRT[0].step + mRT?size}" targetRef="EndEvent" />
+<bpmn:endEvent id="EndEvent">
+  <bpmn:incoming>Flow_${mRT[0].step + mRT?size}</bpmn:incoming>
+</bpmn:endEvent>
+<#else>
+<bpmn:sequenceFlow id="Flow_${mRT[0].step + mRT?size}" sourceRef="ID_${mRT[0].step + mRT?size}" targetRef="ID_${mRT[0].step + mRT?size + 1}" />
+</#if>
+</#list>
+</#if>
+
+<bpmn:parallelGateway id="ID_${mRT[0].step}">
+  <bpmn:incoming>Flow_${mRT[0].step}</bpmn:incoming>
+  <#list mRT as rT>
+  <bpmn:outgoing>FirstInnerFlow_${rT.step}</bpmn:outgoing>
+  </#list>
+</bpmn:parallelGateway>
+
+<bpmn:parallelGateway id="ID_${mRT[0].step + mRT?size}">
+  <#list mRT as rT>
+  <bpmn:incoming>SecondInnerFlow_${rT.step}</bpmn:incoming>
+  </#list>
+  <bpmn:outgoing>Flow_${mRT[0].step + mRT?size}</bpmn:outgoing>
+</bpmn:parallelGateway>
+
+<#list mRT as rT>
+<bpmn:sequenceFlow id="FirstInnerFlow_${rT.step}" sourceRef="ID_${mRT[0].step}" targetRef="Multi_Send_ID_${rT.step}" />
+<bpmn:serviceTask id="Multi_Send_ID_${rT.step}" name="SEND" camunda:delegateExpression="${r"${sendDelegate}"}">
+  <bpmn:extensionElements>
+    <camunda:properties>
+      <camunda:property name="participant" value="${rT.participant}" />
+      <#list rT.input as input>
+      <camunda:property name="input" value="${input}" />
+      </#list>
+      <camunda:property name="component" value="${rT.component}" />
+    </camunda:properties>
+  </bpmn:extensionElements>
+  <bpmn:incoming>FirstInnerFlow_${rT.step}</bpmn:incoming>
+  <bpmn:outgoing>SecondInnerFlow_${rT.step}</bpmn:outgoing>
+</bpmn:serviceTask>
+<bpmn:sequenceFlow id="SecondInnerFlow_${rT.step}" sourceRef="Multi_Send_ID_${rT.step}" targetRef="ID_${mRT[0].step + mRT?size}" />
+</#list>
+
+</#list>
+</#if>
+
+
+<#if endEvent?has_content>
+<#if multiSendTasks?size < 1>
+<#list endEvent as eE>
+<bpmn:endEvent id="EndEvent">
+  <bpmn:incoming>Flow_${eE.step + 1}</bpmn:incoming>
+</bpmn:endEvent>
+<bpmn:sequenceFlow id="Flow_${eE.step + 1}" sourceRef="ID_${eE.step}" targetRef="EndEvent" />
+</#list>
+</#if>
+</#if>
+
 </bpmn:process>
 
 <#if receiveTasks?has_content>
 <#list receiveTasks as rt>
 <bpmn:message id="Message_${rt.step}" name="${rt.component}" />
+</#list>
+</#if>
+
+<#if multiReceiveTasks?has_content>
+<#list multiReceiveTasks as mRT>
+<#list mRT as rT>
+<bpmn:message id="Message_${rT.step}" name="${rT.component}" />
+</#list>
 </#list>
 </#if>
 

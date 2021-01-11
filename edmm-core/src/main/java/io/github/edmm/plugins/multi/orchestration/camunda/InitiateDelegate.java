@@ -2,6 +2,7 @@ package io.github.edmm.plugins.multi.orchestration.camunda;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.UUID;
 
 import javax.inject.Named;
 
@@ -52,8 +53,15 @@ public class InitiateDelegate implements JavaDelegate {
          */
         HashMap<String, Object> variables = new HashMap<>();
         HashMap<String, String> value = new HashMap<>();
+        HashMap<String, String> correlationId = new HashMap<>();
+
+        String uuid = UUID.randomUUID().toString();
         value.put("value", "false");
+        correlationId.put("value", uuid);
+
         variables.put("initiator", value);
+        variables.put("correlationId", correlationId);
+        delegateExecution.setVariable("correlationId", uuid);
 
         // Sets InitiateRequest parameters
         InitiateRequest initiateRequest = new InitiateRequest();

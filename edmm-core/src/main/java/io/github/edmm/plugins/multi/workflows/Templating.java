@@ -39,6 +39,10 @@ public class Templating {
     protected final TransformationContext context;
     protected final Configuration cfg = TemplateHelper.forClasspath(MultiPlugin.class, "/plugins/choreo");
     private final Map<String, Object> data = new HashMap<>();
+    private List<List<BPMNStep>> multiReceiveStepList = new ArrayList<>();
+    private List<List<BPMNStep>> multiSendStepList = new ArrayList<>();
+
+
 
     public Templating(TransformationContext context) {
         this.context = context;
@@ -77,8 +81,9 @@ public class Templating {
      * value from P1 that is needed to deploy the UNDEFINED step in P2.
      *
      */
-    public BPMNStep createSendStep(PlanStep currentStep, PlanStep nextStep) {
+    public List<BPMNStep> createSendStep(PlanStep currentStep, PlanStep nextStep) {
 
+        List<BPMNStep> bpmnSteps = new ArrayList<>();
         BPMNStep bpmnStep = new BPMNStep();
 
         // Retrieves the component from the current step that is related to the next step
@@ -97,11 +102,12 @@ public class Templating {
                         bpmnStep.setInput(component.getRuntimeInputParams());
                         bpmnStep.setParticipant(context.getModel().getParticipantEndpoint(componentName));
 
+                        bpmnSteps.add(bpmnStep);
                     }
                 }
             );
         }
-        return bpmnStep;
+        return bpmnSteps;
     }
 
     /**
@@ -109,8 +115,9 @@ public class Templating {
      * If the current step contains an UNDEFINED technology and the next step has a technology set, e.g. (P1-STEP1: UNDEFINED,
      * P2-STEP2: ANSIBLE), a Receive Sequence is created by determining the relation between STEP1 and STEP2.
      */
-    public BPMNStep createReceiveStep(PlanStep currentStep, PlanStep nextStep) {
+    public List<BPMNStep> createReceiveStep(PlanStep currentStep, PlanStep nextStep) {
 
+        List<BPMNStep> bpmnSteps = new ArrayList<>();
         BPMNStep bpmnStep = new BPMNStep();
         String relatedComponent;
 
@@ -129,11 +136,12 @@ public class Templating {
                     if (component.getName().equals(relation.getTarget())) {
                         bpmnStep.setComponent(component.getName());
                         bpmnStep.setStep(currentStep.getStep());
+                        bpmnSteps.add(bpmnStep);
                     }
                 }
             }
         }
-        return bpmnStep;
+        return bpmnSteps;
     }
 
     /**
@@ -165,11 +173,18 @@ public class Templating {
                 if (step.tech.equals(Technology.UNDEFINED)) {
 
                     // RECEIVE
-                    BPMNStep intermediateBPMNStep = createReceiveStep(step, plan.steps.get(i + 1));
-                    intermediateBPMNStep.setTaskType(BPMNStep.TaskType.RECEIVE);
-                    taskSequence.add("RECEIVE");
-                    bpmnStepList.add(intermediateBPMNStep);
-                    logger.info("CREATING RECEIVE; STEP 0; UNDEFINED TECHNOLOGY");
+                    List<BPMNStep> bpmnSteps = createReceiveStep(step, plan.steps.get(i + 1));
+
+                    if (bpmnSteps.size() == 1) {
+                        BPMNStep intermediateBPMNStep = bpmnSteps.get(0);
+                        intermediateBPMNStep.setTaskType(BPMNStep.TaskType.RECEIVE);
+                        taskSequence.add("RECEIVE");
+                        bpmnStepList.add(intermediateBPMNStep);
+                        logger.info("CREATING RECEIVE; STEP 0; UNDEFINED TECHNOLOGY");
+                    } else {
+                        // If components has relation to multiple sources, so that multiple receives are possible
+                        adjustedSteps = modifyMultiReceiveSteps(taskSequence, i, adjustedSteps, bpmnSteps);
+                    }
 
                 } else  {
 
@@ -182,13 +197,19 @@ public class Templating {
                         adjustedSteps++;
                         logger.info("CREATING DEPLOY; STEP 0; NEXT STEP UNDEFINED TECHNOLOGY");
 
-                        BPMNStep intermediateBPMNStep = createSendStep(step, plan.steps.get(i + 1));
-                        // Adjusts the steps for intermediate BPMN step
-                        intermediateBPMNStep.setStep(i + adjustedSteps);
-                        intermediateBPMNStep.setTaskType(BPMNStep.TaskType.SEND);
-                        taskSequence.add("SEND");
-                        bpmnStepList.add(intermediateBPMNStep);
-                        logger.info("CREATING INTERMEDIATE SEND; STEP 0; NEXT STEP UNDEFINED TECHNOLOGY");
+                        List<BPMNStep> bpmnSteps = createSendStep(step, plan.steps.get(i + 1));
+
+                        if (bpmnSteps.size() == 1) {
+                            BPMNStep intermediateBPMNStep = bpmnSteps.get(0);
+                            // Adjusts the steps for intermediate BPMN step
+                            intermediateBPMNStep.setStep(i + adjustedSteps);
+                            intermediateBPMNStep.setTaskType(BPMNStep.TaskType.SEND);
+                            taskSequence.add("SEND");
+                            bpmnStepList.add(intermediateBPMNStep);
+                            logger.info("CREATING INTERMEDIATE SEND; STEP 0; NEXT STEP UNDEFINED TECHNOLOGY");
+                        } else {
+                            adjustedSteps = modifyMultiSendSteps(taskSequence, i, adjustedSteps, bpmnSteps);
+                        }
 
                     } else {
 
@@ -206,23 +227,37 @@ public class Templating {
                 if (step.tech.equals(Technology.UNDEFINED)) {
 
                     // RECEIVE
-                    BPMNStep intermediateBPMNStep = createReceiveStep(step, plan.steps.get(i + 1));
-                    intermediateBPMNStep.setStep(i + adjustedSteps);
-                    intermediateBPMNStep.setTaskType(BPMNStep.TaskType.RECEIVE);
-                    taskSequence.add("RECEIVE");
-                    bpmnStepList.add(intermediateBPMNStep);
-                    logger.info("CREATING RECEIVE; STEP IN BETWEEN; UNDEFINED TECHNOLOGY");
+                    List<BPMNStep> bpmnSteps = createReceiveStep(step, plan.steps.get(i + 1));
+
+                    if (bpmnSteps.size() == 1) {
+                        BPMNStep intermediateBPMNStep = bpmnSteps.get(0);
+                        intermediateBPMNStep.setStep(i + adjustedSteps);
+                        intermediateBPMNStep.setTaskType(BPMNStep.TaskType.RECEIVE);
+                        taskSequence.add("RECEIVE");
+                        bpmnStepList.add(intermediateBPMNStep);
+                        logger.info("CREATING RECEIVE; STEP IN BETWEEN; UNDEFINED TECHNOLOGY");
+                    } else {
+                        // If components has relation to multiple sources, so that multiple receives are possible
+                        adjustedSteps = modifyMultiReceiveSteps(taskSequence, i, adjustedSteps, bpmnSteps);
+                    }
 
                 } else {
 
                     if (plan.steps.get(i - 1).tech.equals(Technology.UNDEFINED)) {
 
                        if (!taskSequence.get(taskSequence.size() - 1).equals("RECEIVE")) {
-                           BPMNStep intermediateBPMNStep = createReceiveStep(step, plan.steps.get(i + 1));
-                           intermediateBPMNStep.setTaskType(BPMNStep.TaskType.RECEIVE);
-                           taskSequence.add("RECEIVE");
-                           bpmnStepList.add(intermediateBPMNStep);
-                           logger.info("CREATING RECEIVE; STEP IN BETWEEN; PREVIOUS UNDEFINED TECHNOLOGY");
+
+                           List<BPMNStep> bpmnSteps = createReceiveStep(step, plan.steps.get(i + 1));
+
+                           if (bpmnSteps.size() == 1) {
+                               BPMNStep intermediateBPMNStep = bpmnSteps.get(0);
+                               intermediateBPMNStep.setTaskType(BPMNStep.TaskType.RECEIVE);
+                               taskSequence.add("RECEIVE");
+                               bpmnStepList.add(intermediateBPMNStep);
+                               logger.info("CREATING RECEIVE; STEP IN BETWEEN; PREVIOUS UNDEFINED TECHNOLOGY");
+                           } else {
+                               adjustedSteps = modifyMultiReceiveSteps(taskSequence, i, adjustedSteps, bpmnSteps);
+                           }
                        }
 
                        // DEPLOY
@@ -241,12 +276,19 @@ public class Templating {
                         logger.info("CREATING DEPLOY; STEP IN BETWEEN; NEXT STEP UNDEFINED TECHNOLOGY");
 
                         // SEND
-                        BPMNStep intermediateBPMNStep = createSendStep(step, plan.steps.get(i + 1));
-                        intermediateBPMNStep.setStep(i + adjustedSteps);
-                        intermediateBPMNStep.setTaskType(BPMNStep.TaskType.SEND);
-                        taskSequence.add("SEND");
-                        bpmnStepList.add(intermediateBPMNStep);
-                        logger.info("CREATING SEND; STEP IN BETWEEN; NEXT STEP UNDEFINED TECHNOLOGY");
+
+                        List<BPMNStep> bpmnSteps = createSendStep(step, plan.steps.get(i + 1));
+
+                        if (bpmnSteps.size() == 1) {
+                            BPMNStep intermediateBPMNStep = bpmnSteps.get(0);
+                            intermediateBPMNStep.setStep(i + adjustedSteps);
+                            intermediateBPMNStep.setTaskType(BPMNStep.TaskType.SEND);
+                            taskSequence.add("SEND");
+                            bpmnStepList.add(intermediateBPMNStep);
+                            logger.info("CREATING SEND; STEP IN BETWEEN; NEXT STEP UNDEFINED TECHNOLOGY");
+                        } else {
+                            adjustedSteps = modifyMultiSendSteps(taskSequence, i, adjustedSteps, bpmnSteps);
+                        }
 
                     } else {
 
@@ -266,11 +308,17 @@ public class Templating {
                     // SEND
                     if (!taskSequence.get(taskSequence.size() - 1).equals("SEND")) {
 
-                        BPMNStep intermediateBPMNStep = createSendStep(plan.steps.get(i - 1), step);
-                        intermediateBPMNStep.setTaskType(BPMNStep.TaskType.SEND);
-                        taskSequence.add("SEND");
-                        bpmnStepList.add(intermediateBPMNStep);
-                        logger.info("CREATING SEND; LAST STEP; UNDEFINED TECHNOLOGY");
+                        List<BPMNStep> bpmnSteps = createSendStep(plan.steps.get(i - 1), step);
+
+                        if (bpmnSteps.size() == 1) {
+                            BPMNStep intermediateBPMNStep = bpmnSteps.get(0);
+                            intermediateBPMNStep.setTaskType(BPMNStep.TaskType.SEND);
+                            taskSequence.add("SEND");
+                            bpmnStepList.add(intermediateBPMNStep);
+                            logger.info("CREATING SEND; LAST STEP; UNDEFINED TECHNOLOGY");
+                        } else {
+                            adjustedSteps = modifyMultiSendSteps(taskSequence, i, adjustedSteps, bpmnSteps);
+                        }
                     }
 
                 } else {
@@ -297,6 +345,30 @@ public class Templating {
         return bpmnStepList;
     }
 
+    private int modifyMultiSendSteps(List<String> taskSequence, int i, int adjustedSteps, List<BPMNStep> bpmnSteps) {
+        for (BPMNStep steps : bpmnSteps) {
+            steps.setStep(i + adjustedSteps);
+            steps.setTaskType(BPMNStep.TaskType.SEND);
+            taskSequence.add("SEND");
+            adjustedSteps++;
+            logger.info("CREATING MULTI INTERMEDIATE SEND; STEP 0; NEXT STEP UNDEFINED TECHNOLOGY");
+        }
+        multiSendStepList.add(bpmnSteps);
+        return adjustedSteps;
+    }
+
+    private int modifyMultiReceiveSteps(List<String> taskSequence, int i, int adjustedSteps, List<BPMNStep> bpmnSteps) {
+        for (BPMNStep steps : bpmnSteps) {
+            steps.setStep(i + adjustedSteps);
+            steps.setTaskType(BPMNStep.TaskType.RECEIVE);
+            taskSequence.add("RECEIVE");
+            adjustedSteps++;
+            logger.info("CREATING MULTI RECEIVE; STEP 0; UNDEFINED TECHNOLOGY");
+        }
+        multiReceiveStepList.add(bpmnSteps);
+        return adjustedSteps;
+    }
+
     public void createBPMNFromExecutionPlanSequence(List<BPMNStep> bpmnSteps) {
 
         PluginFileAccess fileAccess = context.getFileAccess();
@@ -304,6 +376,7 @@ public class Templating {
         List<BPMNStep> deployTasks = new ArrayList<>();
         List<BPMNStep> sendTasks = new ArrayList<>();
         List<BPMNStep> receiveTasks = new ArrayList<>();
+        List<BPMNStep> endEvent = new ArrayList<>();
 
         for (BPMNStep bpmnStep : bpmnSteps) {
 
@@ -318,12 +391,16 @@ public class Templating {
             }
         }
 
+        endEvent.add(bpmnSteps.get(bpmnSteps.size() - 1));
         owner.add(context.getModel().getParticipantEndpoint(context.getModel().getOwner()));
 
         data.put("deployTasks", deployTasks);
         data.put("sendTasks", sendTasks);
         data.put("receiveTasks", receiveTasks);
         data.put("owner", owner);
+        data.put("multiReceiveTasks", multiReceiveStepList);
+        data.put("multiSendTasks", multiSendStepList);
+        data.put("endEvent", endEvent);
 
         try {
             fileAccess.write("bpmn/MainSequence.txt", TemplateHelper.toString(cfg, "MainSequence.txt", data));
